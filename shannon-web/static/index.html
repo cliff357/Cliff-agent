@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hermes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f13;
+      --surface:   #18181f;
+      --border:    #2a2a36;
+      --accent:    #c9a752;
+      --accent-dim:#7a6330;
+      --text:      #e8e6df;
+      --text-dim:  #888;
+      --user-bg:   #1e1e2a;
+      --agent-bg:  #161620;
+      --tool-bg:   #111118;
+      --tool-text: #5a9a72;
+      --error:     #cc5555;
+      --radius:    12px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.03em;
+    }
+    .logo span { color: var(--text-dim); font-weight: 400; font-size: 0.85rem; }
+    #btn-new {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #btn-new:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px 8px;
+      scroll-behavior: smooth;
+    }
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Welcome state */
+    #welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: var(--text-dim);
+    }
+    #welcome .big { font-size: 2.5rem; }
+    #welcome h2 { font-size: 1.2rem; color: var(--accent); font-weight: 600; }
+    #welcome p { font-size: 0.9rem; }
+
+    .msg {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: fadein 0.2s ease;
+    }
+    @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+    .msg.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      margin-top: 2px;
+    }
+    .msg.user .avatar   { background: var(--accent-dim); color: var(--accent); }
+    .msg.agent .avatar  { background: #22222e; color: var(--accent); }
+
+    .bubble {
+      max-width: 78%;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.94rem;
+      line-height: 1.7;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .msg.user  .bubble { background: var(--user-bg); border: 1px solid var(--border); }
+    .msg.agent .bubble { background: var(--agent-bg); }
+
+    /* Inline code */
+    .bubble code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: #1a1a25;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* Code blocks */
+    .bubble pre {
+      background: #11111a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-family: var(--font-mono);
+      font-size: 0.83rem;
+      line-height: 1.5;
+    }
+    .bubble pre code { background: none; padding: 0; }
+
+    /* Tool activity */
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      font-size: 0.82rem;
+      color: var(--tool-text);
+      font-family: var(--font-mono);
+    }
+    .tool-row .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--tool-text);
+      flex-shrink: 0;
+    }
+    .tool-row.done .dot { background: var(--text-dim); }
+    .tool-row.done { color: var(--text-dim); }
+    .tool-row .tool-name { color: var(--accent); }
+
+    /* Copy button */
+    .msg.agent {
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .msg.agent:hover .copy-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .copy-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+    .copy-btn.copied { color: var(--tool-text); border-color: var(--tool-text); }
+
+    /* Make all bubble text selectable */
+    .bubble { user-select: text; }
+    .bubble .error-text {
+      color: var(--error);
+      user-select: text;
+      cursor: text;
+    }
+
+    /* Cursor blink */
+    .cursor::after {
+      content: '▋';
+      animation: blink 1s step-end infinite;
+      color: var(--accent);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── Input area ── */
+    #inputbar {
+      padding: 8px 20px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Model picker bar — sits just above the textarea */
+    #model-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 2px 7px;
+    }
+    #model-bar-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 3px 10px 3px 8px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-family: var(--font-mono);
+      transition: border-color 0.15s, color 0.15s;
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #model-bar-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+    #model-bar-btn .mb-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--tool-text);
+      flex-shrink: 0;
+    }
+    #model-bar-btn .mb-caret { font-size: 0.6rem; margin-left: 2px; opacity: .6; }
+
+    #form {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      transition: border-color 0.15s;
+    }
+    #form:focus-within { border-color: var(--accent-dim); }
+
+    #input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      resize: none;
+      max-height: 180px;
+      min-height: 24px;
+      font-family: inherit;
+    }
+    #input::placeholder { color: var(--text-dim); }
+
+    #send-btn {
+      background: var(--accent);
+      color: #111;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+      align-self: flex-end;
+    }
+    #send-btn:hover { opacity: 0.85; }
+    #send-btn:disabled { opacity: 0.35; cursor: default; }
+
+    #status {
+      text-align: center;
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      min-height: 14px;
+    }
+
+    /* ── Model chip (header) ── */
+    .model-chip {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      transition: border-color 0.15s, color 0.15s;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .model-chip:hover { border-color: var(--accent-dim); color: var(--accent); }
+    .model-chip.visible { display: flex; }
+    .chip-dot { width:5px; height:5px; border-radius:50%; background:var(--tool-text); flex-shrink:0; }
+
+    /* ── Model picker panel ── */
+    #model-panel {
+      position: absolute;
+      bottom: calc(100% + 6px);  /* floats above the inputbar */
+      left: 20px;
+      right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.55);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      max-height: 520px;
+    }
+    #model-panel.open { display: flex; animation: fadein 0.15s ease; }
+
+    .mp-header {
+      display: flex;
+      align-items: center;
+      padding: 11px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .mp-header h3 {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      flex: 1;
+    }
+    #mp-search {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #mp-search:focus { border-color: var(--accent-dim); }
+    #mp-search::placeholder { color: var(--text-dim); }
+    .mp-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 2px 4px;
+    }
+    .mp-close:hover { color: var(--text); }
+
+    .mp-body {
+      overflow-y: auto;
+      flex: 1;
+      padding: 6px 0 8px;
+    }
+    .mp-body::-webkit-scrollbar { width: 4px; }
+    .mp-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .mp-group-label {
+      font-size: 0.69rem;
+      font-weight: 600;
+      color: var(--accent-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 14px 3px;
+    }
+    .mp-item {
+      display: flex;
+      align-items: center;
+      padding: 6px 14px;
+      font-size: 0.83rem;
+      font-family: var(--font-mono);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 8px;
+    }
+    .mp-item:hover { background: rgba(201,167,82,0.07); }
+    .mp-item.active {
+      color: var(--accent);
+      background: rgba(201,167,82,0.1);
+    }
+    .mp-item .mi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-item .mi-tag {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0 5px;
+      flex-shrink: 0;
+    }
+    .mp-item.active .mi-tag { color: var(--accent-dim); }
+    .mp-item .mi-ctx {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      opacity: 0.8;
+    }
+    .mp-item .mi-ctx.warn {
+      color: #e74c3c;
+      font-weight: 600;
+      opacity: 1;
+    }
+    .mp-item .mi-param {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      background: rgba(255,255,255,0.04);
+      border-radius: 3px;
+      padding: 0 4px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .mp-item .mi-vendor {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      opacity: 0.5;
+      flex-shrink: 0;
+      font-style: italic;
+    }
+    .mp-item .mi-dl {
+      font-size: 0.62rem;
+      color: var(--accent-dim);
+      border: 1px solid var(--accent-dim);
+      border-radius: 3px;
+      padding: 0 5px;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+    .mp-item.warn-row { opacity: 0.7; }
+    .mp-item.warn-row:hover { opacity: 1; }
+
+    .mp-empty {
+      padding: 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .mp-loading {
+      padding: 16px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    /* Tab bar in model picker */
+    .mp-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .mp-tab {
+      flex: 1; background: none; border: none; color: var(--text-dim);
+      padding: 7px 0; font-size: 0.78rem; font-weight: 500; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .mp-tab:hover { color: var(--text); }
+    .mp-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Remote Ollama config bar */
+    .mp-remote-cfg {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      display: none; flex-direction: column; gap: 5px;
+    }
+    .mp-remote-cfg.open { display: flex; }
+    .mp-remote-cfg label { font-size: 0.68rem; color: var(--text-dim); }
+    .mp-remote-cfg input {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 4px 8px; border-radius: 5px; font-size: 0.78rem;
+      font-family: var(--font-mono); outline: none; width: 100%;
+    }
+    .mp-remote-cfg input:focus { border-color: var(--accent-dim); }
+    .mp-connect-btn {
+      background: var(--accent); color: #111; border: none;
+      padding: 4px 14px; border-radius: 5px; font-size: 0.78rem;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .mp-connect-btn:hover { opacity: 0.85; }
+    .mp-connect-btn:disabled { opacity: 0.35; cursor: default; }
+    .mp-remote-status { font-size: 0.7rem; }
+    .mp-remote-status.ok { color: var(--tool-text); }
+    .mp-remote-status.err { color: var(--error); }
+
+    /* Manual entry row at bottom */
+    .mp-manual {
+      border-top: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    #mp-custom-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #mp-custom-input:focus { border-color: var(--accent-dim); }
+    #mp-custom-input::placeholder { color: var(--text-dim); }
+    #mp-apply-btn {
+      background: var(--accent);
+      color: #111;
+      border: none;
+      padding: 5px 13px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    #mp-apply-btn:hover { opacity: 0.85; }
+    #mp-apply-btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Model popover (header chip) ── */
+    .model-popover {
+      position: fixed;
+      top: 58px;
+      right: calc(50% - 430px + 20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      width: 300px;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      display: none;
+    }
+    @media (max-width: 900px) { .model-popover { right: 12px; } }
+    .model-popover.open { display: block; animation: fadein 0.15s ease; }
+    .model-popover h3 { font-size:.82rem; color:var(--accent); margin-bottom:12px; font-weight:600; letter-spacing:.03em; }
+    .model-popover label { display:block; font-size:.75rem; color:var(--text-dim); margin-bottom:4px; }
+    .model-popover input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:7px 10px; border-radius:6px; font-size:.83rem; font-family:var(--font-mono); outline:none; transition:border-color .15s; margin-bottom:10px; }
+    .model-popover input:focus { border-color:var(--accent-dim); }
+    .model-popover .adv-toggle { font-size:.74rem; color:var(--text-dim); cursor:pointer; margin-bottom:8px; display:inline-block; }
+    .model-popover .adv-toggle:hover { color:var(--text); }
+    .model-popover .adv-section { display:none; }
+    .model-popover .adv-section.open { display:block; }
+    .model-popover .popover-actions { display:flex; gap:8px; margin-top:4px; }
+    .pop-btn-switch { flex:1; background:var(--accent); color:#111; border:none; padding:7px 12px; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:600; transition:opacity .15s; }
+    .pop-btn-switch:hover { opacity:.85; }
+    .pop-btn-switch:disabled { opacity:.35; cursor:default; }
+    .pop-btn-cancel { background:none; border:1px solid var(--border); color:var(--text-dim); padding:7px 12px; border-radius:6px; cursor:pointer; font-size:.85rem; transition:border-color .15s; }
+    .pop-btn-cancel:hover { border-color:var(--text-dim); color:var(--text); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">⚡ Hermes <span>Agent</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="model-chip" id="model-chip" onclick="openModelPopover()" title="Switch model">
+        <span class="chip-dot"></span>
+        <span id="model-label"></span>
+      </button>
+      <button id="btn-new" title="Start a new conversation">New chat</button>
+    </div>
+  </header>
+
+  <!-- Model hotswap popover -->
+  <div class="model-popover" id="model-popover">
+    <h3>⇄ Switch Model</h3>
+    <label>Model</label>
+    <input id="pop-model" type="text" placeholder="e.g. claude-sonnet-4.6" />
+    <span class="adv-toggle" id="adv-toggle" onclick="toggleAdv()">▸ Provider / Base URL (optional)</span>
+    <div class="adv-section" id="adv-section">
+      <label style="margin-top:8px">Provider</label>
+      <input id="pop-provider" type="text" placeholder="e.g. copilot, anthropic, openrouter" />
+      <label>Base URL</label>
+      <input id="pop-base-url" type="text" placeholder="e.g. http://localhost:11434/v1" />
+    </div>
+    <div class="popover-actions">
+      <button class="pop-btn-switch" id="btn-switch" onclick="switchModel()">Switch</button>
+      <button class="pop-btn-cancel" onclick="closeModelPopover()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="messages">
+    <div id="welcome">
+      <div class="big">🪬</div>
+      <h2>Hermes Agent</h2>
+      <p>Type a message to start</p>
+    </div>
+  </div>
+
+  <div id="inputbar" style="position:relative">
+    <!-- Model picker panel (floats above) -->
+    <div id="model-panel">
+      <div class="mp-header">
+        <h3>⇄ Switch Model</h3>
+        <input id="mp-search" type="text" placeholder="Search models…" oninput="filterModels()" autocomplete="off" />
+        <button class="mp-close" onclick="closeModelPanel()" title="Close">✕</button>
+      </div>
+      <div class="mp-tabs">
+        <button class="mp-tab active" id="mp-tab-local" onclick="switchTab('local')">Local</button>
+        <button class="mp-tab" id="mp-tab-remote" onclick="switchTab('remote')">Remote</button>
+      </div>
+      <div class="mp-remote-cfg" id="mp-remote-cfg">
+        <label>Ollama Host</label>
+        <input id="mp-remote-host" type="text" placeholder="192.168.1.100:11434" />
+        <label>Bearer Token</label>
+        <div style="display:flex;gap:6px;width:100%">
+          <input id="mp-remote-token" type="password" placeholder="Token" style="flex:1" />
+          <button class="mp-connect-btn" id="mp-connect-btn" onclick="connectRemote()">Connect</button>
+        </div>
+        <div class="mp-remote-status" id="mp-remote-status"></div>
+      </div>
+      <div class="mp-body" id="mp-body">
+        <div class="mp-loading">Loading models…</div>
+      </div>
+      <div class="mp-manual">
+        <input id="mp-custom-input" type="text" placeholder="Or type any model name…" autocomplete="off" />
+        <button id="mp-apply-btn" onclick="applyCustomModel()">Use</button>
+      </div>
+    </div>
+
+    <div id="model-bar">
+      <button id="model-bar-btn" onclick="toggleModelPanel()" title="Switch model">
+        <span class="mb-dot"></span>
+        <span id="model-bar-label">Choose model</span>
+        <span class="mb-caret">▾</span>
+      </button>
+    </div>
+    <form id="form" onsubmit="return false;">
+      <textarea id="input" rows="1" placeholder="Message Hermes…" autofocus></textarea>
+      <button id="send-btn" type="submit">Send</button>
+    </form>
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let sessionId = null;
+let busy = false;
+let currentModel = '';
+let pendingModel = '';  // model selected before first message
+
+// ── DOM refs ──────────────────────────────────────────────────
+const messages  = document.getElementById('messages');
+const welcome   = document.getElementById('welcome');
+const form      = document.getElementById('form');
+const input     = document.getElementById('input');
+const sendBtn   = document.getElementById('send-btn');
+const statusEl  = document.getElementById('status');
+const btnNew    = document.getElementById('btn-new');
+const modelChip = document.getElementById('model-chip');
+const modelLabel= document.getElementById('model-label');
+const modelPopover = document.getElementById('model-popover');const modelPanel   = document.getElementById('model-panel');
+const modelBarLabel= document.getElementById('model-bar-label');
+// ── Auto-resize textarea ──────────────────────────────────────────────
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+});
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
+form.addEventListener('submit', () => send());
+btnNew.addEventListener('click', newChat);
+
+// ── New chat ─────────────────────────────────────────────────────────
+async function newChat() {
+  if (sessionId) {
+    await fetch(`/api/session/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+  }
+  sessionId = null;  currentModel = '';  pendingModel = '';
+  localStorage.removeItem('selectedModel');
+  modelChip.classList.remove('visible');
+  // Restore configured model label (or placeholder if none)
+  const saved = modelBarLabel.dataset.configModel || '';
+  modelBarLabel.textContent = saved ? (saved.split('/').pop() || saved) : 'Choose model';
+  closeModelPopover();
+  closeModelPanel();
+  messages.innerHTML = '';
+  messages.appendChild(welcome);
+  welcome.style.display = '';
+  setStatus('');
+}
+
+// ── Append a message bubble ───────────────────────────────────────────
+function addBubble(role) {
+  if (welcome.parentNode) welcome.style.display = 'none';
+
+  const msg    = document.createElement('div');
+  msg.className = `msg ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? '🧑' : '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (role === 'agent') bubble.classList.add('cursor');
+    if (role === 'agent') {
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', () => {
+        const text = bubble._rawText || bubble.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = 'Copied!';
+          copyBtn.classList.add('copied');
+          setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1500);
+        });
+      });
+      msg.appendChild(copyBtn);
+    }
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  messages.appendChild(msg);
+  scrollBottom();
+  return bubble;
+}
+
+// ── Append a tool-activity row inside a bubble ────────────────────────
+function addToolRow(bubble, name, preview, done = false) {
+  const row = document.createElement('div');
+  row.className = 'tool-row' + (done ? ' done' : '');
+  row.innerHTML = `<span class="dot"></span><span class="tool-name">${esc(name)}</span>${preview ? ` <span style="opacity:.6">${esc(preview.slice(0, 80))}</span>` : ''}`;
+  bubble.appendChild(row);
+  scrollBottom();
+  return row;
+}
+
+// ── Minimal markdown → HTML (code blocks + inline code) ───────────────
+function renderMd(text) {
+  // Fenced code blocks
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre><code>${escHtml(code.trimEnd())}</code></pre>`
+  );
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`);
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return text;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function esc(s) { return escHtml(String(s)); }
+
+function scrollBottom() {
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Send ──────────────────────────────────────────────────────────────
+async function send() {
+  const text = input.value.trim();
+  if (!text || busy) return;
+
+  busy = true;
+  sendBtn.disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // User bubble
+  const userBubble = addBubble('user');
+  userBubble.textContent = text;
+
+  // Agent bubble
+  const agentBubble = addBubble('agent');
+  let rawText = '';
+  let toolRows = {};  // name → row element
+
+  setStatus('Thinking…');
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign(
+        { message: text, session_id: sessionId },
+        pendingModel ? { model: pendingModel, provider: window._pendingProvider || '', base_url: window._pendingBaseUrl || '', api_key: window._pendingApiKey || '' } : {}
+      )),
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += decoder.decode(value, { stream: true });
+
+      // Process SSE events
+      const parts = buf.split('\n\n');
+      buf = parts.pop();  // keep incomplete chunk
+
+      for (const part of parts) {
+        if (!part.trim() || part.startsWith(':')) continue;
+        const eventMatch = part.match(/^event: (\w+)/m);
+        const dataMatch  = part.match(/^data: (.+)/ms);
+        if (!eventMatch || !dataMatch) continue;
+
+        const event = eventMatch[1];
+        let data;
+        try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+
+        if (event === 'session') {
+          sessionId = data.session_id;
+          pendingModel = '';  // session created, clear pending
+          window._pendingProvider = '';
+          window._pendingBaseUrl  = '';
+          if (data.model) setModelChip(data.model);
+
+        } else if (event === 'delta') {
+          rawText += data.text;
+          agentBubble._rawText = rawText;
+          agentBubble.innerHTML = renderMd(rawText);
+          agentBubble.classList.add('cursor');
+          scrollBottom();
+
+        } else if (event === 'tool_start') {
+          setStatus(`⚙ ${data.name}…`);
+          const row = addToolRow(agentBubble, data.name, data.preview);
+          toolRows[data.name] = row;
+
+        } else if (event === 'tool_done') {
+          setStatus('');
+          const row = toolRows[data.name];
+          if (row) {
+            row.className = 'tool-row done';
+            const dot = row.querySelector('.dot');
+            if (dot) dot.style.background = 'var(--text-dim)';
+          }
+
+        } else if (event === 'error') {
+          const errMsg = data.message || data.error || 'Unknown error';
+          const errSpan = document.createElement('span');
+          errSpan.className = 'error-text';
+          errSpan.textContent = 'Error: ' + errMsg;
+          agentBubble.appendChild(document.createTextNode('\n'));
+          agentBubble.appendChild(errSpan);
+          agentBubble._rawText = (agentBubble._rawText || '') + '\nError: ' + errMsg;
+          agentBubble.classList.remove('cursor');
+
+        } else if (event === 'done') {
+          agentBubble.classList.remove('cursor');
+          if (!rawText) agentBubble.textContent = '(no response)';
+          setStatus('');
+        }
+      }
+    }
+  } catch (err) {
+    agentBubble.classList.remove('cursor');
+    const errSpan = document.createElement('span');
+    errSpan.className = 'error-text';
+    errSpan.textContent = 'Connection error: ' + err.message;
+    agentBubble.innerHTML = '';
+    agentBubble.appendChild(errSpan);
+    agentBubble._rawText = 'Connection error: ' + err.message;
+    setStatus('');
+  }
+
+  busy = false;
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+// ── Model chip + bar ─────────────────────────────────────────────────
+function setModelChip(model) {
+  currentModel = model;
+  const short = model.split('/').pop() || model;
+  modelLabel.textContent = short;
+  modelChip.classList.add('visible');
+  modelBarLabel.textContent = short;
+}
+
+// ── Header chip popover ───────────────────────────────────────────────
+function openModelPopover() {
+  if (!sessionId) return;
+  document.getElementById('pop-model').value = currentModel;
+  document.getElementById('pop-provider').value = '';
+  document.getElementById('pop-base-url').value = '';
+  document.getElementById('adv-section').classList.remove('open');
+  document.getElementById('adv-toggle').textContent = '\u25b8 Provider / Base URL (optional)';
+  modelPopover.classList.add('open');
+  setTimeout(() => document.getElementById('pop-model').focus(), 30);
+  setTimeout(() => document.addEventListener('click', _outsideClick, { once: true }), 50);
+}
+
+function _outsideClick(e) {
+  if (!modelPopover.contains(e.target) && e.target !== modelChip) {
+    closeModelPopover();
+  } else if (modelPopover.classList.contains('open')) {
+    setTimeout(() => document.addEventListener('click', _outsideClick, { once: true }), 50);
+  }
+}
+
+function closeModelPopover() {
+  modelPopover.classList.remove('open');
+}
+
+function toggleAdv() {
+  const sec = document.getElementById('adv-section');
+  const tog = document.getElementById('adv-toggle');
+  sec.classList.toggle('open');
+  tog.textContent = sec.classList.contains('open')
+    ? '\u25be Provider / Base URL (optional)'
+    : '\u25b8 Provider / Base URL (optional)';
+}
+
+async function switchModel() {
+  const model = document.getElementById('pop-model').value.trim();
+  if (!model || !sessionId) return;
+
+  const btn = document.getElementById('btn-switch');
+  btn.disabled = true;
+  btn.textContent = 'Switching\u2026';
+
+  try {
+    const body = { model };
+    const provider = document.getElementById('pop-provider').value.trim();
+    const baseUrl  = document.getElementById('pop-base-url').value.trim();
+    if (provider) body.provider = provider;
+    if (baseUrl)  body.base_url = baseUrl;
+
+    const resp = await fetch(`/api/session/${sessionId}/model`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      setModelChip(data.model);
+      closeModelPopover();
+      addSystemNote(`\u21c4 Model switched \u2192 ${data.model}`);
+    } else {
+      addSystemNote(`Switch failed: ${data.error || 'unknown error'}`, true);
+    }
+  } catch (err) {
+    addSystemNote(`Switch error: ${err.message}`, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Switch';
+  }
+}
+
+// ── Bottom model picker panel ─────────────────────────────────────────
+let _mpGroups = [];   // [{label, models:[]}]
+let _mpLoaded = false;
+let _activeTab = localStorage.getItem('mpActiveTab') || 'local';
+let _remoteGroups = [];
+let _remoteLoaded = false;
+let _remoteHost = localStorage.getItem('remoteOllamaHost') || '';
+let _remoteToken = localStorage.getItem('remoteOllamaToken') || '';
+
+async function toggleModelPanel() {
+  if (modelPanel.classList.contains('open')) {
+    closeModelPanel();
+    return;
+  }
+  modelPanel.classList.add('open');
+  document.getElementById('mp-search').value = '';
+  document.getElementById('mp-custom-input').value = '';
+  input.blur();
+
+  // Restore saved tab state
+  const savedTab = _activeTab || 'local';
+  document.getElementById('mp-tab-local').classList.toggle('active', savedTab === 'local');
+  document.getElementById('mp-tab-remote').classList.toggle('active', savedTab === 'remote');
+  document.getElementById('mp-remote-cfg').classList.toggle('open', savedTab === 'remote');
+
+  if (savedTab === 'remote') {
+    if (!_remoteLoaded && _remoteHost) {
+      connectRemote();
+    } else {
+      renderRemoteTab();
+    }
+  } else if (!_mpLoaded) {
+    await loadModelPanel();
+  } else {
+    renderModelPanel('');
+  }
+
+  setTimeout(() => document.getElementById('mp-search').focus(), 50);
+  setTimeout(() => document.addEventListener('click', _mpOutsideClick, { once: true }), 80);
+}
+
+function closeModelPanel() {
+  modelPanel.classList.remove('open');
+}
+
+function _mpOutsideClick(e) {
+  const bar = document.getElementById('model-bar-btn');
+  if (modelPanel.contains(e.target) || e.target === bar || bar.contains(e.target)) {
+    if (modelPanel.classList.contains('open')) {
+      setTimeout(() => document.addEventListener('click', _mpOutsideClick, { once: true }), 80);
+    }
+    return;
+  }
+  closeModelPanel();
+}
+
+async function loadModelPanel() {
+  const mpBody = document.getElementById('mp-body');
+  mpBody.innerHTML = '<div class="mp-loading">\u231b Loading models\u2026</div>';
+
+  try {
+    const url = '/api/models' + (sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '');
+    const resp = await fetch(url);
+    const data = await resp.json();
+    _mpGroups = data.groups || [];
+    window._mpMinContext = data.minimum_context || 64000;
+    _mpLoaded = true;
+    renderModelPanel('');
+  } catch (err) {
+    mpBody.innerHTML = `<div class="mp-empty">Failed to load models: ${esc(err.message)}</div>`;
+  }
+}
+
+function switchTab(tab) {
+  _activeTab = tab;
+  localStorage.setItem('mpActiveTab', tab);
+  document.getElementById('mp-tab-local').classList.toggle('active', tab === 'local');
+  document.getElementById('mp-tab-remote').classList.toggle('active', tab === 'remote');
+  document.getElementById('mp-remote-cfg').classList.toggle('open', tab === 'remote');
+  const q = document.getElementById('mp-search').value || '';
+  if (tab === 'local') {
+    if (!_mpLoaded) loadModelPanel();
+    else renderModelPanel(q);
+  } else {
+    // Auto-reconnect if we have saved credentials but haven't loaded yet
+    if (!_remoteLoaded && _remoteHost) {
+      connectRemote();
+    } else {
+      renderRemoteTab();
+    }
+  }
+}
+
+function renderRemoteTab() {
+  const mpBody = document.getElementById('mp-body');
+  if (_remoteLoaded && _remoteGroups.length) {
+    const q = document.getElementById('mp-search').value || '';
+    mpBody.innerHTML = _buildModelListHtml(_remoteGroups, q);
+  } else if (_remoteLoaded) {
+    mpBody.innerHTML = '<div class="mp-empty">No models found on remote server</div>';
+  } else {
+    mpBody.innerHTML = '<div class="mp-empty">Enter host and token, then click Connect</div>';
+  }
+}
+
+async function connectRemote() {
+  const hostEl = document.getElementById('mp-remote-host');
+  const tokenEl = document.getElementById('mp-remote-token');
+  const statusEl = document.getElementById('mp-remote-status');
+  const btn = document.getElementById('mp-connect-btn');
+  if (!hostEl || !tokenEl) return;
+  const host = hostEl.value.trim();
+  const token = tokenEl.value.trim();
+  if (!host) {
+    if (statusEl) { statusEl.textContent = 'Enter a host'; statusEl.className = 'mp-remote-status err'; }
+    return;
+  }
+  _remoteHost = host; _remoteToken = token;
+  localStorage.setItem('remoteOllamaHost', host);
+  localStorage.setItem('remoteOllamaToken', token);
+  if (btn) { btn.disabled = true; btn.textContent = '\u2026'; }
+  if (statusEl) { statusEl.textContent = 'Connecting\u2026'; statusEl.className = 'mp-remote-status'; }
+  try {
+    const resp = await fetch('/api/remote-ollama/models', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({host, token}),
+    });
+    const data = await resp.json();
+    if (data.error) {
+      if (statusEl) { statusEl.textContent = data.error; statusEl.className = 'mp-remote-status err'; }
+      _remoteLoaded = false;
+    } else {
+      _remoteGroups = data.groups || [];
+      window._mpMinContext = data.minimum_context || window._mpMinContext || 64000;
+      _remoteLoaded = true;
+      const total = _remoteGroups.reduce((n, g) => n + g.models.length, 0);
+      if (statusEl) { statusEl.textContent = `Connected \u00b7 ${total} models`; statusEl.className = 'mp-remote-status ok'; }
+      renderRemoteTab();
+    }
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = 'Failed: ' + err.message; statusEl.className = 'mp-remote-status err'; }
+    _remoteLoaded = false;
+  } finally {
+    const b = document.getElementById('mp-connect-btn');
+    if (b) { b.disabled = false; b.textContent = 'Connect'; }
+  }
+}
+
+function _buildModelListHtml(groups, query) {
+  const q = (query || '').toLowerCase().trim();
+  const minCtx = window._mpMinContext || 64000;
+  let html = '';
+  let totalShown = 0;
+
+  for (const group of groups) {
+    const models = group.models.map(m => typeof m === 'string' ? {id: m, ctx: 0} : m);
+    const filtered = q
+      ? models.filter(m => m.id.toLowerCase().includes(q) || (m.param_size || '').toLowerCase().includes(q) || (m.vendor || '').toLowerCase().includes(q))
+      : models;
+    if (!filtered.length) continue;
+
+    const gProvider = group.provider || '';
+    const gBaseUrl  = group.base_url || '';
+    const gApiKey   = group.api_key || '';
+    html += `<div class="mp-group-label">${esc(group.label)}</div>`;
+    for (const m of filtered) {
+      const mid = m.id;
+      const short = mid.split('/').pop() || mid;
+      const isActive = mid === currentModel || short === currentModel;
+      const tag = mid.includes('/') ? mid.split('/')[0] : '';
+      const ctx = m.ctx || 0;
+      const belowMin = ctx > 0 && ctx < minCtx;
+      const warnClass = belowMin ? ' warn-row' : '';
+      const pickArg = JSON.stringify({model: mid, provider: gProvider, base_url: gBaseUrl, api_key: gApiKey});
+
+      let ctxLabel = '';
+      if (ctx > 0) {
+        const ctxK = ctx >= 1000000 ? (ctx / 1000000).toFixed(0) + 'M' : Math.round(ctx / 1000) + 'K';
+        const warnCls = belowMin ? ' warn' : '';
+        ctxLabel = `<span class="mi-ctx${warnCls}" title="${ctx.toLocaleString()} tokens">${ctxK}</span>`;
+      }
+
+      const paramLabel = m.param_size
+        ? `<span class="mi-param">${esc(m.param_size)}</span>`
+        : '';
+
+      const vendorLabel = m.vendor
+        ? `<span class="mi-vendor">${esc(m.vendor)}</span>`
+        : '';
+
+      const dlLabel = (m.installed === false)
+        ? `<span class="mi-dl">\u2193 ${m.dl_size || 'pull'}</span>`
+        : '';
+
+      html += `<div class="mp-item${isActive ? ' active' : ''}${warnClass}" onclick='pickModel(${pickArg})'>
+        <span class="mi-name">${esc(short)}</span>
+        ${vendorLabel}
+        ${paramLabel}
+        ${ctxLabel}
+        ${tag ? `<span class="mi-tag">${esc(tag)}</span>` : ''}
+        ${dlLabel}
+      </div>`;
+      totalShown++;
+    }
+  }
+
+  if (!totalShown && groups.length) {
+    html = `<div class="mp-empty">No models match "${esc(q)}"</div>`;
+  } else if (!groups.length) {
+    html = '<div class="mp-empty">No models found.<br><small>Start Ollama or check your provider config.</small></div>';
+  }
+
+  return html;
+}
+
+function renderModelPanel(query) {
+  document.getElementById('mp-body').innerHTML = _buildModelListHtml(_mpGroups, query);
+}
+
+function filterModels() {
+  const q = document.getElementById('mp-search').value;
+  if (_activeTab === 'remote' && _remoteLoaded) {
+    document.getElementById('mp-body').innerHTML = _buildModelListHtml(_remoteGroups, q);
+  } else if (_activeTab === 'local') {
+    renderModelPanel(q);
+  }
+}
+
+// Check if an Ollama library model needs to be pulled before use
+async function maybePullModel(modelId) {
+  const groups = _activeTab === 'remote' ? _remoteGroups : _mpGroups;
+  // If model is installed, nothing to do
+  const installed = (groups || []).some(g =>
+    !g.is_library &&
+    g.models.some(m => (typeof m === 'string' ? m : m.id) === modelId)
+  );
+  if (installed) return true;
+
+  // Check if it's a library model
+  const isLib = (groups || []).some(g =>
+    g.is_library &&
+    g.models.some(m => (typeof m === 'string' ? m : m.id) === modelId)
+  );
+  if (!isLib) return true;
+
+  addSystemNote(`\u23ec Pulling ${modelId}\u2026`);
+
+  if (_activeTab === 'remote' && _remoteHost) {
+    try {
+      const resp = await fetch('/api/remote-ollama/pull', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({host: _remoteHost, token: _remoteToken, name: modelId}),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        addSystemNote(`\u2705 ${modelId} pulled on remote`);
+        _remoteLoaded = false;
+        return true;
+      } else {
+        addSystemNote(`\u274c Pull failed: ${data.error || 'unknown'}`, true);
+        return false;
+      }
+    } catch (err) {
+      addSystemNote(`\u274c Pull error: ${err.message}`, true);
+      return false;
+    }
+  }
+
+  try {
+    const resp = await fetch('/api/ollama/pull', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: modelId}),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      addSystemNote(`\u2705 ${modelId} pulled successfully`);
+      _mpLoaded = false;
+      return true;
+    } else {
+      addSystemNote(`\u274c Pull failed: ${data.error || 'unknown'}`, true);
+      return false;
+    }
+  } catch (err) {
+    addSystemNote(`\u274c Pull error: ${err.message}`, true);
+    return false;
+  }
+}
+
+async function pickModel(info) {
+  // info = {model, provider, base_url, api_key} from group data
+  closeModelPanel();
+  // If it's a library model, pull first
+  const pulled = await maybePullModel(info.model);
+  if (!pulled) return;
+  await doSwitchModel(info.model, info.provider, info.base_url, info.api_key);
+}
+
+async function applyCustomModel() {
+  const val = document.getElementById('mp-custom-input').value.trim();
+  if (!val) return;
+  closeModelPanel();
+  await doSwitchModel(val, '', '');
+}
+
+async function doSwitchModel(modelId, provider, baseUrl, apiKey) {
+  provider = provider || '';
+  baseUrl  = baseUrl  || '';
+  apiKey   = apiKey   || '';
+
+  // If no session yet, store as pending — sent with the first chat request.
+  if (!sessionId) {
+    pendingModel = modelId;
+    window._pendingProvider = provider;
+    window._pendingBaseUrl  = baseUrl;
+    window._pendingApiKey   = apiKey;
+    currentModel = modelId;
+    const short = modelId.split('/').pop() || modelId;
+    modelBarLabel.textContent = short;
+    modelBarLabel.title = modelId + (provider ? `  ·  ${provider}` : '');
+    setModelChip(modelId);
+    // Persist selection so page refresh restores it
+    localStorage.setItem('selectedModel', JSON.stringify({model: modelId, provider, base_url: baseUrl, api_key: apiKey}));
+    return;
+  }
+
+  const applyBtn = document.getElementById('mp-apply-btn');
+  applyBtn.disabled = true;
+
+  try {
+    const body = { model: modelId };
+    if (provider) body.provider = provider;
+    if (baseUrl)  body.base_url = baseUrl;
+    if (apiKey)   body.api_key  = apiKey;
+    const resp = await fetch(`/api/session/${sessionId}/model`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      setModelChip(data.model);
+      localStorage.setItem('selectedModel', JSON.stringify({model: modelId, provider, base_url: baseUrl, api_key: apiKey}));
+      addSystemNote(`\u21c4 Model switched \u2192 ${data.model}`);
+    } else {
+      addSystemNote(`Switch failed: ${data.error || 'unknown error'}`, true);
+    }
+  } catch (err) {
+    addSystemNote(`Switch error: ${err.message}`, true);
+  } finally {
+    applyBtn.disabled = false;
+  }
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModelPopover();
+    closeModelPanel();
+  }
+});
+document.getElementById('pop-model').addEventListener('keydown', e => {
+  if (e.key === 'Enter') switchModel();
+});
+document.getElementById('mp-search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    // pick first visible item
+    const first = document.querySelector('#mp-body .mp-item');
+    if (first) first.click();
+  }
+});
+document.getElementById('mp-custom-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') applyCustomModel();
+});
+
+function addSystemNote(text, isError = false) {
+  const note = document.createElement('div');
+  note.style.cssText = [
+    'text-align:center',
+    'font-size:0.75rem',
+    `color:${isError ? 'var(--error)' : 'var(--text-dim)'}`,
+    'padding:2px 0 14px',
+    'letter-spacing:0.02em',
+  ].join(';');
+  note.textContent = `\u2500\u2500\u2500 ${text} \u2500\u2500\u2500`;
+  messages.appendChild(note);
+  scrollBottom();
+}
+
+function setStatus(msg) {
+  statusEl.textContent = msg;
+}
+
+// ── Init: show configured model before any session ────────────────────
+(async function initStatus() {
+  // Restore persisted model selection (survives page refresh)
+  try {
+    const saved = JSON.parse(localStorage.getItem('selectedModel') || 'null');
+    if (saved && saved.model) {
+      pendingModel = saved.model;
+      window._pendingProvider = saved.provider || '';
+      window._pendingBaseUrl  = saved.base_url || '';
+      window._pendingApiKey   = saved.api_key || '';
+      currentModel = saved.model;
+      const short = saved.model.split('/').pop() || saved.model;
+      modelBarLabel.textContent = short;
+      modelBarLabel.title = saved.model + (saved.provider ? `  ·  ${saved.provider}` : '');
+      setModelChip(saved.model);
+      return;  // skip config fetch — user already chose a model
+    }
+  } catch {}
+
+  try {
+    const resp = await fetch('/api/config');
+    if (!resp.ok) return;
+    const d = await resp.json();
+    if (d.model && d.model !== '(auto-detect)') {
+      const short = d.model.split('/').pop() || d.model;
+      modelBarLabel.textContent = short;
+      modelBarLabel.dataset.configModel = d.model;
+    }
+    if (d.provider && d.provider !== '(auto)') {
+      modelBarLabel.title = `${d.model}  ·  provider: ${d.provider}`;
+    }
+  } catch {}
+})();
+
+// ── Init remote config inputs from localStorage ──────────────────────
+(function initRemoteConfig() {
+  const h = localStorage.getItem('remoteOllamaHost');
+  const t = localStorage.getItem('remoteOllamaToken');
+  if (h) document.getElementById('mp-remote-host').value = h;
+  if (t) document.getElementById('mp-remote-token').value = t;
+  // Enter key in remote inputs
+  document.getElementById('mp-remote-host').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('mp-remote-token').focus();
+  });
+  document.getElementById('mp-remote-token').addEventListener('keydown', e => {
+    if (e.key === 'Enter') connectRemote();
+  });
+})();
+</script>
+</body>
+</html>
