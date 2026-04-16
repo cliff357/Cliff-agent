@@ -25,6 +25,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from project_store import ProjectStore
+
 # ── Make sure parent project is importable ────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from run_agent import AIAgent  # noqa: E402
@@ -39,6 +41,28 @@ def _load_hermes_config() -> dict:
 
 _HERMES_CFG = _load_hermes_config()
 
+# ── Project store ─────────────────────────────────────────────────────
+_project_store = ProjectStore()
+
+_TRIVIAL_PATTERNS = re.compile(
+    r"^(hi|hey|hello|yo|sup|hola|howdy|good\s*(morning|afternoon|evening|night)"
+    r"|thanks?(\s+you)?|thx|ok(ay)?|bye|see\s+ya|cheers|lol|haha|hmm+|wow"
+    r"|yes|no|yep|nope|sure|cool|nice|great|awesome|k|kk"
+    r"|你好|嗨|哈囉|早安|晚安|謝謝|掰掰|係|唔係|好|ok啦)[\s!?.~]*$",
+    re.IGNORECASE,
+)
+
+def _is_substantive_query(message: str) -> bool:
+    """Return True if the message looks like it needs document retrieval."""
+    msg = message.strip()
+    if len(msg) < 3:
+        return False
+    if _TRIVIAL_PATTERNS.match(msg):
+        return False
+    # Very short messages with no question-like content
+    if len(msg.split()) <= 2 and "?" not in msg:
+        return False
+    return True
 def _resolved_defaults() -> dict:
     """Return {model, provider, base_url} from ~/.hermes/config.yaml."""
     model_cfg = _HERMES_CFG.get("model", {})
@@ -84,6 +108,8 @@ def _get_or_create_agent(session_id: str, *, model: str = "",
                 api_key=eff_api_key,
                 platform="cli",
                 quiet_mode=True,
+                skip_context_files=True,
+                skip_memory=True,
             )
         else:
             # Session already exists — hotswap if a different model is requested
@@ -105,6 +131,7 @@ class ChatRequest(BaseModel):
     provider: Optional[str] = None
     base_url: Optional[str] = None
     api_key: Optional[str] = None
+    project_id: Optional[str] = None
 
 
 class SwitchModelRequest(BaseModel):
@@ -152,16 +179,63 @@ async def chat(request: ChatRequest):
     def on_tool_complete(name: str, result_preview: str = ""):
         q.put(("tool_done", {"name": name, "preview": result_preview}))
 
+    def on_reasoning(text: str):
+        q.put(("reasoning", text))
+
+    def on_thinking(text: str):
+        q.put(("thinking", text))
+
+    def on_tool_gen(name: str):
+        q.put(("tool_gen", {"name": name}))
+
     # Attach callbacks to the agent instance before this turn
     agent.stream_delta_callback = on_delta
     agent.tool_start_callback = on_tool_start
     agent.tool_complete_callback = on_tool_complete
+    agent.reasoning_callback = on_reasoning
+    agent.thinking_callback = on_thinking
+    agent.tool_gen_callback = on_tool_gen
 
     # ── Run agent in a background thread ─────────────────────────────
+    # ── Build project context if a project is active ───────────────
+    # NOTE: We prepend context to the user message (not system_message)
+    # because AIAgent caches the system prompt across turns for prompt
+    # caching.  Per-turn context must go in the user message.
+    effective_message = request.message
+    context_tokens = 0
+    if request.project_id:
+        doc_index = _project_store.get_document_index(request.project_id)
+
+        relevant = ""
+        if _is_substantive_query(request.message):
+            relevant = _project_store.retrieve_context(
+                request.project_id, request.message
+            )
+
+        if doc_index or relevant:
+            ctx_parts = []
+            if doc_index:
+                ctx_parts.append(f"[Project Documents]\n{doc_index}")
+            if relevant:
+                ctx_parts.append(
+                    "[Retrieved Context]\n"
+                    "The following sections from the project documents may be relevant:\n\n"
+                    + relevant
+                )
+            else:
+                ctx_parts.append(
+                    "[Note: No specific sections were retrieved for this message. "
+                    "The project has the documents listed above. "
+                    "If the user asks about them, mention what's available.]"
+                )
+            context_block = "\n\n".join(ctx_parts)
+            context_tokens = len(context_block.split())
+            effective_message = f"{context_block}\n\n---\n\n{request.message}"
+
     def run():
         try:
             agent.run_conversation(
-                request.message,
+                effective_message,
             )
         except Exception as e:
             q.put(("error", str(e)))
@@ -178,6 +252,8 @@ async def chat(request: ChatRequest):
         eff_model    = agent.model    or d["model"]    or ""
         eff_provider = agent.provider or d["provider"] or ""
         yield _sse("session", {"session_id": session_id, "model": eff_model, "provider": eff_provider})
+        if context_tokens:
+            yield _sse("context_info", {"tokens": context_tokens, "project_id": request.project_id or ""})
         loop = asyncio.get_event_loop()
 
         while True:
@@ -192,6 +268,12 @@ async def chat(request: ChatRequest):
             event, payload = item
             if event == "delta":
                 yield _sse("delta", {"text": payload})
+            elif event == "reasoning":
+                yield _sse("reasoning", {"text": payload})
+            elif event == "thinking":
+                yield _sse("thinking", {"text": payload})
+            elif event == "tool_gen":
+                yield _sse("tool_gen", payload)
             elif event == "tool_start":
                 yield _sse("tool_start", payload)
             elif event == "tool_done":
@@ -575,6 +657,141 @@ async def list_models(session_id: Optional[str] = None):
     return JSONResponse(result)
 
 
+# ── Cloud providers (paid API services) ───────────────────────────────
+
+# Provider registry — id, display name, env var for API key, base_url
+_CLOUD_PROVIDERS = [
+    {"id": "copilot",   "name": "GitHub Copilot",  "env": "COPILOT_GITHUB_TOKEN", "base_url": "https://api.githubcopilot.com", "icon": "🐙"},
+    {"id": "anthropic",  "name": "Anthropic",       "env": "ANTHROPIC_API_KEY",    "base_url": "https://api.anthropic.com", "icon": "🔮"},
+    {"id": "openai",     "name": "OpenAI",          "env": "OPENAI_API_KEY",       "base_url": "https://api.openai.com/v1", "icon": "🤖"},
+    {"id": "google",     "name": "Google Gemini",   "env": "GEMINI_API_KEY",       "base_url": "", "icon": "💎"},
+    {"id": "deepseek",   "name": "DeepSeek",        "env": "DEEPSEEK_API_KEY",     "base_url": "https://api.deepseek.com/v1", "icon": "🔍"},
+    {"id": "xai",        "name": "xAI (Grok)",      "env": "XAI_API_KEY",          "base_url": "https://api.x.ai/v1", "icon": "⚡"},
+    {"id": "groq",       "name": "Groq",            "env": "GROQ_API_KEY",         "base_url": "https://api.groq.com/openai/v1", "icon": "🚀"},
+    {"id": "openrouter", "name": "OpenRouter",      "env": "OPENROUTER_API_KEY",   "base_url": "https://openrouter.ai/api/v1", "icon": "🌐"},
+]
+
+
+def _check_provider_has_key(provider_id: str) -> bool:
+    """Check if a cloud provider has an API key configured (env or hermes auth)."""
+    import os
+    prov = next((p for p in _CLOUD_PROVIDERS if p["id"] == provider_id), None)
+    if not prov:
+        return False
+    # Check env var directly
+    if os.getenv(prov["env"]):
+        return True
+    # Check hermes auth system
+    try:
+        from hermes_cli.auth import resolve_provider
+        # For copilot, check dedicated auth
+        if provider_id == "copilot":
+            try:
+                from hermes_cli.copilot_auth import resolve_copilot_token
+                token, _ = resolve_copilot_token()
+                return bool(token)
+            except Exception:
+                pass
+        return False
+    except ImportError:
+        return False
+
+
+def _fetch_cloud_provider_models(provider_id: str) -> list[dict]:
+    """Fetch models for a specific cloud provider."""
+    try:
+        from hermes_cli.models import curated_models_for_provider, fetch_github_model_catalog
+
+        if provider_id == "copilot":
+            try:
+                from hermes_cli.copilot_auth import resolve_copilot_token
+                token, _ = resolve_copilot_token()
+                if token:
+                    catalog = fetch_github_model_catalog(api_key=token, timeout=5.0)
+                    if catalog:
+                        items = []
+                        for item in catalog:
+                            mid = str(item.get("id", "")).strip()
+                            if not mid:
+                                continue
+                            ctx = _ctx_for_provider_model(mid, "copilot")
+                            items.append({"id": mid, "ctx": ctx})
+                        return items
+            except Exception:
+                pass
+
+        pairs = curated_models_for_provider(provider_id)
+        if pairs:
+            items = []
+            for mid, _ in pairs:
+                if not mid:
+                    continue
+                ctx = _ctx_for_provider_model(mid, provider_id)
+                items.append({"id": mid, "ctx": ctx})
+            return items
+    except ImportError:
+        pass
+    return []
+
+
+class CloudProviderConnectRequest(BaseModel):
+    provider_id: str
+    api_key: Optional[str] = None
+
+
+@app.get("/api/cloud-providers")
+async def list_cloud_providers():
+    """Return list of cloud providers with connection status."""
+    result = []
+    for prov in _CLOUD_PROVIDERS:
+        has_key = _check_provider_has_key(prov["id"])
+        result.append({
+            "id": prov["id"],
+            "name": prov["name"],
+            "icon": prov["icon"],
+            "base_url": prov["base_url"],
+            "connected": has_key,
+        })
+    return JSONResponse({"providers": result})
+
+
+@app.post("/api/cloud-providers/{provider_id}/models")
+async def cloud_provider_models(provider_id: str, req: Request):
+    """Fetch models for a cloud provider. Optionally accepts {api_key} in body."""
+    body = {}
+    try:
+        body = await req.json()
+    except Exception:
+        pass
+
+    prov = next((p for p in _CLOUD_PROVIDERS if p["id"] == provider_id), None)
+    if not prov:
+        return JSONResponse({"error": f"Unknown provider: {provider_id}"}, status_code=404)
+
+    # If user supplied an API key, temporarily set it in env for this request
+    user_key = body.get("api_key", "")
+    import os
+    old_val = os.environ.get(prov["env"])
+    if user_key:
+        os.environ[prov["env"]] = user_key
+
+    try:
+        loop = asyncio.get_event_loop()
+        models = await loop.run_in_executor(None, lambda: _fetch_cloud_provider_models(provider_id))
+        return JSONResponse({
+            "provider": provider_id,
+            "base_url": prov["base_url"],
+            "models": models,
+        })
+    finally:
+        # Restore original env
+        if user_key:
+            if old_val is not None:
+                os.environ[prov["env"]] = old_val
+            else:
+                os.environ.pop(prov["env"], None)
+
+
 # ── Ollama pull (download a library model) ────────────────────────────
 class OllamaPullRequest(BaseModel):
     name: str
@@ -829,6 +1046,96 @@ async def remote_ollama_pull_endpoint(req: RemoteOllamaPullRequest):
     result = await loop.run_in_executor(
         None, lambda: _remote_ollama_pull_sync(req.host, req.token, req.name))
     return JSONResponse(result)
+
+
+# ── Project CRUD ──────────────────────────────────────────────────────
+class CreateProjectRequest(BaseModel):
+    name: str
+    description: str = ""
+
+class UpdateProjectRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class AddDocumentRequest(BaseModel):
+    title: str
+    content: str
+    doc_type: str = "other"
+
+
+@app.get("/api/projects")
+async def list_projects():
+    return JSONResponse(_project_store.list_projects())
+
+
+@app.post("/api/projects")
+async def create_project(req: CreateProjectRequest):
+    proj = _project_store.create_project(req.name, req.description)
+    return JSONResponse(proj, status_code=201)
+
+
+@app.get("/api/projects/{project_id}")
+async def get_project(project_id: str):
+    proj = _project_store.get_project(project_id)
+    if not proj:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(proj)
+
+
+@app.patch("/api/projects/{project_id}")
+async def update_project(project_id: str, req: UpdateProjectRequest):
+    proj = _project_store.update_project(project_id, name=req.name, description=req.description)
+    if not proj:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(proj)
+
+
+@app.delete("/api/projects/{project_id}")
+async def delete_project(project_id: str):
+    ok = _project_store.delete_project(project_id)
+    if not ok:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse({"ok": True})
+
+
+# ── Document CRUD ─────────────────────────────────────────────────────
+@app.get("/api/projects/{project_id}/documents")
+async def list_documents(project_id: str):
+    return JSONResponse(_project_store.list_documents(project_id))
+
+
+@app.post("/api/projects/{project_id}/documents")
+async def add_document(project_id: str, req: AddDocumentRequest):
+    proj = _project_store.get_project(project_id)
+    if not proj:
+        return JSONResponse({"error": "project not found"}, status_code=404)
+    doc = _project_store.add_document(project_id, req.title, req.content, req.doc_type)
+    return JSONResponse(doc, status_code=201)
+
+
+@app.get("/api/documents/{doc_id}")
+async def get_document(doc_id: str):
+    doc = _project_store.get_document(doc_id)
+    if not doc:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(doc)
+
+
+@app.delete("/api/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    ok = _project_store.delete_document(doc_id)
+    if not ok:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse({"ok": True})
+
+
+# ── Context preview (for debugging) ──────────────────────────────────
+@app.post("/api/projects/{project_id}/context")
+async def preview_context(project_id: str, req: Request):
+    body = await req.json()
+    query = body.get("query", "")
+    context = _project_store.build_project_context(project_id, query)
+    return JSONResponse({"context": context, "token_estimate": len(context.split())})
 
 
 # ── Session reset ─────────────────────────────────────────────────────

@@ -21,17 +21,22 @@ if [[ ! -f "$VENV" ]]; then
 fi
 
 # ── Check if port is already in use ──────────
-EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
+EXISTING_PIDS=$(lsof -ti :"$PORT" 2>/dev/null || true)
 
-if [[ -n "$EXISTING_PID" ]]; then
-  EXISTING_CMD=$(ps -p "$EXISTING_PID" -o comm= 2>/dev/null || echo "unknown")
-  echo "⚠️   Port $PORT 已被 PID $EXISTING_PID 佔用 ($EXISTING_CMD)"
+if [[ -n "$EXISTING_PIDS" ]]; then
+  PID_COUNT=$(echo "$EXISTING_PIDS" | wc -l | tr -d ' ')
+  echo "⚠️   Port $PORT 已被 ${PID_COUNT} 個 process 佔用: $(echo $EXISTING_PIDS | tr '\n' ' ')"
   echo ""
-  read -rp "    殺左佢重新啟動？[Y/n] " choice
+  read -rp "    殺左佢哋重新啟動？[Y/n] " choice
   choice="${choice:-Y}"
   if [[ "$choice" =~ ^[Yy]$ ]]; then
-    kill -9 "$EXISTING_PID" 2>/dev/null && echo "✅  已殺 PID $EXISTING_PID"
-    sleep 1
+    echo "$EXISTING_PIDS" | xargs kill -9 2>/dev/null
+    echo "✅  已殺所有佔用 port $PORT 嘅 process"
+    # Wait until port is actually free
+    for i in {1..10}; do
+      if ! lsof -ti :"$PORT" &>/dev/null; then break; fi
+      sleep 0.5
+    done
   else
     echo "🚫  取消啟動"
     exit 0

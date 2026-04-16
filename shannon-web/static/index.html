@@ -34,12 +34,291 @@
     }
 
     /* ── Layout ── */
+    #shell {
+      display: flex;
+      height: 100dvh;
+      width: 100%;
+    }
     #app {
       display: flex;
       flex-direction: column;
-      height: 100dvh;
+      flex: 1;
+      min-width: 0;
       max-width: 860px;
       margin: 0 auto;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .sb-header {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sb-header h2 {
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .sb-add-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .sb-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sb-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+    .sb-list::-webkit-scrollbar { width: 4px; }
+    .sb-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .sb-item {
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .sb-item:hover { background: rgba(255,255,255,0.03); }
+    .sb-item.active {
+      background: rgba(201,167,82,0.08);
+      border-left-color: var(--accent);
+    }
+    .sb-item-name {
+      font-size: 0.84rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sb-item.active .sb-item-name { color: var(--accent); }
+    .sb-item-meta {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .sb-no-project {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+    }
+    .sb-no-project:hover { background: rgba(255,255,255,0.03); }
+    .sb-no-project.active {
+      color: var(--text);
+      border-left-color: var(--text-dim);
+    }
+    .sb-section {
+      padding: 10px 14px 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--accent-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    /* Docs panel inside sidebar */
+    .sb-docs {
+      border-top: 1px solid var(--border);
+      max-height: 40%;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+    }
+    .sb-docs.open { display: flex; }
+    .sb-docs::-webkit-scrollbar { width: 4px; }
+    .sb-docs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .sb-docs-header {
+      padding: 8px 14px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sb-docs-header h3 {
+      font-size: 0.72rem;
+      color: var(--accent-dim);
+      font-weight: 600;
+    }
+    .sb-doc-item {
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+    .sb-doc-item:hover { color: var(--text); }
+    .sb-doc-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sb-doc-type {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      background: rgba(255,255,255,0.04);
+      border-radius: 3px;
+      padding: 0 4px;
+    }
+    .sb-doc-tokens { font-size: 0.62rem; color: var(--text-dim); }
+    .sb-doc-del {
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; font-size: 0.72rem; opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      padding: 0 2px;
+    }
+    .sb-doc-item:hover .sb-doc-del { opacity: 1; }
+    .sb-doc-del:hover { color: var(--error); }
+    .sb-doc-add {
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      color: var(--accent-dim);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .sb-doc-add:hover { color: var(--accent); }
+    .sb-doc-empty {
+      padding: 8px 14px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    /* Project badge in chat header */
+    .project-badge {
+      font-size: 0.72rem;
+      color: var(--accent-dim);
+      background: rgba(201,167,82,0.08);
+      border: 1px solid rgba(201,167,82,0.15);
+      padding: 2px 8px;
+      border-radius: 10px;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: none;
+    }
+    .project-badge.visible { display: inline-block; }
+
+    /* Add doc modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 520px;
+      max-width: 90vw;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadein 0.15s ease;
+    }
+    .modal-box h3 { font-size: 0.9rem; color: var(--accent); font-weight: 600; }
+    .modal-box label { font-size: 0.75rem; color: var(--text-dim); }
+    .modal-box input, .modal-box select {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; border-radius: 6px; font-size: 0.85rem;
+      font-family: inherit; outline: none; width: 100%;
+    }
+    .modal-box input:focus, .modal-box select:focus { border-color: var(--accent-dim); }
+    .modal-box textarea {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 10px; border-radius: 6px; font-size: 0.83rem;
+      font-family: var(--font-mono); outline: none; width: 100%;
+      min-height: 180px; resize: vertical; line-height: 1.5;
+    }
+    .modal-box textarea:focus { border-color: var(--accent-dim); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-actions button {
+      padding: 6px 16px; border-radius: 6px; font-size: 0.85rem;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .modal-btn-primary {
+      background: var(--accent); color: #111; border: none; font-weight: 600;
+    }
+    .modal-btn-primary:hover { opacity: 0.85; }
+    .modal-btn-cancel {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+    }
+    .modal-btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* File drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent-dim);
+      background: rgba(201,167,82,0.05);
+    }
+    .drop-zone input { display: none; }
+    .drop-zone .file-name {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+    .or-divider {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin: 4px 0;
+    }
+    /* View doc modal */
+    .doc-view-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 0.83rem;
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      overflow-y: auto;
+      max-height: 50vh;
+      min-height: 120px;
+    }
+    .doc-view-meta {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: flex;
+      gap: 12px;
+    }
+
+    @media (max-width: 700px) {
+      #sidebar { display: none; }
     }
 
     /* ── Header ── */
@@ -173,6 +452,69 @@
     .tool-row.done .dot { background: var(--text-dim); }
     .tool-row.done { color: var(--text-dim); }
     .tool-row .tool-name { color: var(--accent); }
+
+    /* Thinking status */
+    .thinking-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-style: italic;
+      animation: fadein 0.2s ease;
+    }
+    .thinking-row .pulse {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.2s ease-in-out infinite;
+    }
+    .thinking-row .thinking-elapsed {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      opacity: 0.6;
+      font-style: normal;
+    }
+
+    /* Reasoning block */
+    .reasoning-block {
+      margin: 6px 0;
+      border-left: 2px solid var(--accent-dim);
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(201,167,82,0.03);
+      border-radius: 0 6px 6px 0;
+    }
+    .reasoning-block::-webkit-scrollbar { width: 3px; }
+    .reasoning-block::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .reasoning-header {
+      font-size: 0.68rem;
+      color: var(--accent-dim);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+    .reasoning-block.collapsed {
+      max-height: 60px;
+      cursor: pointer;
+      position: relative;
+    }
+    .reasoning-block.collapsed::after {
+      content: '▾ click to expand';
+      position: absolute;
+      bottom: 2px;
+      right: 6px;
+      font-size: 0.62rem;
+      color: var(--accent-dim);
+    }
 
     /* Copy button */
     .msg.agent {
@@ -519,6 +861,35 @@
     .mp-remote-status.ok { color: var(--tool-text); }
     .mp-remote-status.err { color: var(--error); }
 
+    /* Cloud providers config */
+    .mp-cloud-cfg {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      display: none; flex-direction: column; gap: 8px;
+    }
+    .mp-cloud-cfg.open { display: flex; }
+    .cloud-providers {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .cloud-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+      padding: 5px 10px; border-radius: 8px; font-size: 0.72rem;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .cloud-chip:hover { border-color: var(--accent-dim); color: var(--text); }
+    .cloud-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(218,165,32,0.08); }
+    .cloud-chip.connected::after {
+      content: '✓'; font-size: 0.6rem; color: var(--tool-text); margin-left: 2px;
+    }
+    .cloud-chip .chip-icon { font-size: 0.82rem; }
+    .cloud-key-row label { font-size: 0.68rem; color: var(--text-dim); }
+    .cloud-key-row input {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 4px 8px; border-radius: 5px; font-size: 0.78rem;
+      font-family: var(--font-mono); outline: none; width: 100%;
+    }
+    .cloud-key-row input:focus { border-color: var(--accent-dim); }
+
     /* Manual entry row at bottom */
     .mp-manual {
       border-top: 1px solid var(--border);
@@ -589,10 +960,30 @@
   </style>
 </head>
 <body>
+<div id="shell">
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div class="sb-header">
+    <h2>📂 Projects</h2>
+    <button class="sb-add-btn" onclick="promptNewProject()" title="New project">+</button>
+  </div>
+  <div class="sb-list" id="sb-list">
+    <div class="sb-no-project active" id="sb-no-proj" onclick="selectProject(null)">💬 No project</div>
+  </div>
+  <div class="sb-docs" id="sb-docs">
+    <div class="sb-docs-header">
+      <h3>📄 Documents</h3>
+      <button class="sb-add-btn" onclick="openAddDocModal()" title="Add document" style="width:22px;height:22px;font-size:0.8rem">+</button>
+    </div>
+    <div id="sb-doc-list"></div>
+  </div>
+</div>
+
 <div id="app">
   <header>
     <div class="logo">⚡ Hermes <span>Agent</span></div>
     <div style="display:flex;gap:8px;align-items:center">
+      <span class="project-badge" id="project-badge"></span>
       <button class="model-chip" id="model-chip" onclick="openModelPopover()" title="Switch model">
         <span class="chip-dot"></span>
         <span id="model-label"></span>
@@ -638,6 +1029,7 @@
       <div class="mp-tabs">
         <button class="mp-tab active" id="mp-tab-local" onclick="switchTab('local')">Local</button>
         <button class="mp-tab" id="mp-tab-remote" onclick="switchTab('remote')">Remote</button>
+        <button class="mp-tab" id="mp-tab-cloud" onclick="switchTab('cloud')">Cloud</button>
       </div>
       <div class="mp-remote-cfg" id="mp-remote-cfg">
         <label>Ollama Host</label>
@@ -648,6 +1040,17 @@
           <button class="mp-connect-btn" id="mp-connect-btn" onclick="connectRemote()">Connect</button>
         </div>
         <div class="mp-remote-status" id="mp-remote-status"></div>
+      </div>
+      <div class="mp-cloud-cfg" id="mp-cloud-cfg">
+        <div class="cloud-providers" id="cloud-providers"></div>
+        <div class="cloud-key-row" id="cloud-key-row" style="display:none">
+          <label id="cloud-key-label">API Key</label>
+          <div style="display:flex;gap:6px;width:100%">
+            <input id="cloud-api-key" type="password" placeholder="Paste your API key" style="flex:1" />
+            <button class="mp-connect-btn" id="cloud-connect-btn" onclick="connectCloudProvider()">Connect</button>
+          </div>
+          <div class="mp-remote-status" id="cloud-status"></div>
+        </div>
       </div>
       <div class="mp-body" id="mp-body">
         <div class="mp-loading">Loading models…</div>
@@ -671,6 +1074,66 @@
     </form>
     <div id="status"></div>
   </div>
+</div><!-- /app -->
+</div><!-- /shell -->
+
+<!-- Add Document Modal -->
+<div class="modal-overlay" id="add-doc-modal">
+  <div class="modal-box">
+    <h3>📄 Add Document</h3>
+    <label>Title</label>
+    <input id="doc-title" type="text" placeholder="e.g. Design Flow v2" />
+    <label>Type</label>
+    <select id="doc-type">
+      <option value="other">Other</option>
+      <option value="design_flow">Design Flow</option>
+      <option value="system_flow">System Flow</option>
+      <option value="progress">Progress</option>
+      <option value="notes">Notes</option>
+      <option value="api_spec">API Spec</option>
+      <option value="requirements">Requirements</option>
+    </select>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      📁 Drop a file here or click to browse
+      <br><small>.txt, .md, .json, .csv, .log, .yaml</small>
+      <input type="file" id="file-input" accept=".txt,.md,.json,.csv,.log,.yaml,.yml,.xml,.html,.py,.js,.ts" />
+      <div class="file-name" id="file-name"></div>
+    </div>
+    <div class="or-divider">─ or paste content directly ─</div>
+    <textarea id="doc-content" placeholder="Paste your document content here…"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeAddDocModal()">Cancel</button>
+      <button class="modal-btn-primary" id="doc-save-btn" onclick="saveDocument()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="new-proj-modal">
+  <div class="modal-box" style="width:380px">
+    <h3>📂 New Project</h3>
+    <label>Name</label>
+    <input id="proj-name" type="text" placeholder="e.g. ACME Portal" />
+    <label>Description (optional)</label>
+    <input id="proj-desc" type="text" placeholder="Brief description" />
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeNewProjModal()">Cancel</button>
+      <button class="modal-btn-primary" id="proj-save-btn" onclick="saveProject()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- View/Edit Document Modal -->
+<div class="modal-overlay" id="view-doc-modal">
+  <div class="modal-box" style="width:640px">
+    <h3 id="view-doc-title">📄 Document</h3>
+    <div class="doc-view-meta" id="view-doc-meta"></div>
+    <div class="doc-view-content" id="view-doc-content"></div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeViewDocModal()">Close</button>
+      <button class="modal-btn-primary" id="view-doc-edit-btn" onclick="editDocFromView()">Edit</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -679,6 +1142,8 @@ let sessionId = null;
 let busy = false;
 let currentModel = '';
 let pendingModel = '';  // model selected before first message
+let activeProjectId = localStorage.getItem('activeProjectId') || null;
+let _projects = [];
 
 // ── DOM refs ──────────────────────────────────────────────────
 const messages  = document.getElementById('messages');
@@ -809,6 +1274,10 @@ async function send() {
   const agentBubble = addBubble('agent');
   let rawText = '';
   let toolRows = {};  // name → row element
+  let thinkingRow = null;
+  let reasoningBlock = null;
+  let thinkingStart = Date.now();
+  let thinkingTimer = null;
 
   setStatus('Thinking…');
 
@@ -818,7 +1287,8 @@ async function send() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign(
         { message: text, session_id: sessionId },
-        pendingModel ? { model: pendingModel, provider: window._pendingProvider || '', base_url: window._pendingBaseUrl || '', api_key: window._pendingApiKey || '' } : {}
+        pendingModel ? { model: pendingModel, provider: window._pendingProvider || '', base_url: window._pendingBaseUrl || '', api_key: window._pendingApiKey || '' } : {},
+        activeProjectId ? { project_id: activeProjectId } : {}
       )),
     });
 
@@ -855,7 +1325,77 @@ async function send() {
           window._pendingBaseUrl  = '';
           if (data.model) setModelChip(data.model);
 
+        } else if (event === 'context_info') {
+          // Show how much project context was injected
+          if (data.tokens > 0) {
+            const ctxNote = document.createElement('div');
+            ctxNote.className = 'thinking-row';
+            ctxNote.style.fontSize = '0.72rem';
+            ctxNote.innerHTML = `<span class="pulse" style="background:var(--tool-text)"></span>📂 Injected ~${data.tokens.toLocaleString()} tokens of project context`;
+            agentBubble.appendChild(ctxNote);
+            // Auto-remove after response starts
+            agentBubble._ctxNote = ctxNote;
+          }
+
+        } else if (event === 'thinking') {
+          // Agent status (spinner text like "(◕‿◕) pondering...")
+          if (data.text) {
+            if (!thinkingRow) {
+              thinkingRow = document.createElement('div');
+              thinkingRow.className = 'thinking-row';
+              thinkingRow.innerHTML = '<span class="pulse"></span><span class="thinking-text"></span><span class="thinking-elapsed"></span>';
+              agentBubble.appendChild(thinkingRow);
+              scrollBottom();
+              thinkingStart = Date.now();
+              thinkingTimer = setInterval(() => {
+                const el = thinkingRow && thinkingRow.querySelector('.thinking-elapsed');
+                if (el) {
+                  const s = Math.floor((Date.now() - thinkingStart) / 1000);
+                  el.textContent = s >= 2 ? ` (${s}s)` : '';
+                }
+              }, 1000);
+            }
+            thinkingRow.querySelector('.thinking-text').textContent = data.text;
+            setStatus(data.text);
+          } else if (thinkingRow) {
+            if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+            thinkingRow.remove();
+            thinkingRow = null;
+          }
+
+        } else if (event === 'reasoning') {
+          // Model reasoning/thinking tokens
+          if (!reasoningBlock) {
+            const hdr = document.createElement('div');
+            hdr.className = 'reasoning-header';
+            hdr.textContent = '💭 Reasoning';
+            agentBubble.appendChild(hdr);
+            reasoningBlock = document.createElement('div');
+            reasoningBlock.className = 'reasoning-block';
+            agentBubble.appendChild(reasoningBlock);
+          }
+          reasoningBlock.textContent += data.text;
+          reasoningBlock.scrollTop = reasoningBlock.scrollHeight;
+          scrollBottom();
+
+        } else if (event === 'tool_gen') {
+          // Model is generating tool call arguments
+          setStatus(`⚙ Generating ${data.name}…`);
+
         } else if (event === 'delta') {
+          // Clear thinking row when actual content arrives
+          if (thinkingRow) {
+            if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+            thinkingRow.remove(); thinkingRow = null;
+          }
+          if (agentBubble._ctxNote) { agentBubble._ctxNote.remove(); agentBubble._ctxNote = null; }
+          // Collapse reasoning block when response text starts
+          if (reasoningBlock && !reasoningBlock.classList.contains('collapsed')) {
+            reasoningBlock.classList.add('collapsed');
+            reasoningBlock.addEventListener('click', function() {
+              this.classList.toggle('collapsed');
+            });
+          }
           rawText += data.text;
           agentBubble._rawText = rawText;
           agentBubble.innerHTML = renderMd(rawText);
@@ -997,6 +1537,12 @@ let _remoteGroups = [];
 let _remoteLoaded = false;
 let _remoteHost = localStorage.getItem('remoteOllamaHost') || '';
 let _remoteToken = localStorage.getItem('remoteOllamaToken') || '';
+let _cloudProviders = [];  // [{id, name, icon, base_url, connected}]
+let _cloudProvidersLoaded = false;
+let _selectedCloudProvider = localStorage.getItem('cloudProvider') || '';
+let _cloudModels = [];     // [{id, ctx}]
+let _cloudModelsLoaded = false;
+let _savedCloudKeys = JSON.parse(localStorage.getItem('cloudKeys') || '{}');  // {provider_id: api_key}
 
 async function toggleModelPanel() {
   if (modelPanel.classList.contains('open')) {
@@ -1012,9 +1558,14 @@ async function toggleModelPanel() {
   const savedTab = _activeTab || 'local';
   document.getElementById('mp-tab-local').classList.toggle('active', savedTab === 'local');
   document.getElementById('mp-tab-remote').classList.toggle('active', savedTab === 'remote');
+  document.getElementById('mp-tab-cloud').classList.toggle('active', savedTab === 'cloud');
   document.getElementById('mp-remote-cfg').classList.toggle('open', savedTab === 'remote');
+  document.getElementById('mp-cloud-cfg').classList.toggle('open', savedTab === 'cloud');
 
-  if (savedTab === 'remote') {
+  if (savedTab === 'cloud') {
+    if (!_cloudProvidersLoaded) loadCloudProviders();
+    else renderCloudTab();
+  } else if (savedTab === 'remote') {
     if (!_remoteLoaded && _remoteHost) {
       connectRemote();
     } else {
@@ -1067,18 +1618,22 @@ function switchTab(tab) {
   localStorage.setItem('mpActiveTab', tab);
   document.getElementById('mp-tab-local').classList.toggle('active', tab === 'local');
   document.getElementById('mp-tab-remote').classList.toggle('active', tab === 'remote');
+  document.getElementById('mp-tab-cloud').classList.toggle('active', tab === 'cloud');
   document.getElementById('mp-remote-cfg').classList.toggle('open', tab === 'remote');
+  document.getElementById('mp-cloud-cfg').classList.toggle('open', tab === 'cloud');
   const q = document.getElementById('mp-search').value || '';
   if (tab === 'local') {
     if (!_mpLoaded) loadModelPanel();
     else renderModelPanel(q);
-  } else {
-    // Auto-reconnect if we have saved credentials but haven't loaded yet
+  } else if (tab === 'remote') {
     if (!_remoteLoaded && _remoteHost) {
       connectRemote();
     } else {
       renderRemoteTab();
     }
+  } else if (tab === 'cloud') {
+    if (!_cloudProvidersLoaded) loadCloudProviders();
+    else renderCloudTab();
   }
 }
 
@@ -1213,8 +1768,157 @@ function filterModels() {
   const q = document.getElementById('mp-search').value;
   if (_activeTab === 'remote' && _remoteLoaded) {
     document.getElementById('mp-body').innerHTML = _buildModelListHtml(_remoteGroups, q);
+  } else if (_activeTab === 'cloud' && _cloudModelsLoaded) {
+    renderCloudTab();
   } else if (_activeTab === 'local') {
     renderModelPanel(q);
+  }
+}
+
+// ── Cloud providers tab ─────────────────────────────────────────────
+async function loadCloudProviders() {
+  const container = document.getElementById('cloud-providers');
+  container.innerHTML = '<span style="font-size:0.72rem;color:var(--text-dim)">Loading providers…</span>';
+  try {
+    const resp = await fetch('/api/cloud-providers');
+    const data = await resp.json();
+    _cloudProviders = data.providers || [];
+    _cloudProvidersLoaded = true;
+    renderCloudProviderChips();
+    if (_selectedCloudProvider) {
+      selectCloudProvider(_selectedCloudProvider, true);
+    } else {
+      document.getElementById('mp-body').innerHTML = '<div class="mp-empty">Select a provider above</div>';
+    }
+  } catch (err) {
+    container.innerHTML = `<span style="font-size:0.72rem;color:var(--error)">Failed: ${esc(err.message)}</span>`;
+  }
+}
+
+function renderCloudProviderChips() {
+  const container = document.getElementById('cloud-providers');
+  let html = '';
+  for (const p of _cloudProviders) {
+    const hasSavedKey = !!_savedCloudKeys[p.id];
+    const active = _selectedCloudProvider === p.id ? ' active' : '';
+    const connected = (p.connected || hasSavedKey) ? ' connected' : '';
+    html += `<button class="cloud-chip${active}${connected}" onclick="selectCloudProvider('${p.id}')">
+      <span class="chip-icon">${p.icon}</span> ${esc(p.name)}
+    </button>`;
+  }
+  container.innerHTML = html;
+}
+
+function selectCloudProvider(providerId, autoLoad) {
+  _selectedCloudProvider = providerId;
+  localStorage.setItem('cloudProvider', providerId);
+  renderCloudProviderChips();
+
+  const prov = _cloudProviders.find(p => p.id === providerId);
+  const hasSavedKey = !!_savedCloudKeys[providerId];
+  const keyRow = document.getElementById('cloud-key-row');
+  const keyInput = document.getElementById('cloud-api-key');
+  const statusEl = document.getElementById('cloud-status');
+  const keyLabel = document.getElementById('cloud-key-label');
+
+  if (prov && (prov.connected || hasSavedKey)) {
+    keyRow.style.display = 'none';
+    statusEl.textContent = '';
+    loadCloudModels(providerId);
+  } else {
+    keyRow.style.display = '';
+    keyLabel.textContent = prov ? `${prov.name} API Key` : 'API Key';
+    keyInput.value = '';
+    keyInput.placeholder = prov ? `Paste your ${prov.name} API key` : 'Paste API key';
+    statusEl.textContent = '';
+    if (!autoLoad) {
+      document.getElementById('mp-body').innerHTML = '<div class="mp-empty">Enter your API key to connect</div>';
+      setTimeout(() => keyInput.focus(), 50);
+    }
+  }
+}
+
+async function connectCloudProvider() {
+  const providerId = _selectedCloudProvider;
+  if (!providerId) return;
+  const keyInput = document.getElementById('cloud-api-key');
+  const apiKey = keyInput.value.trim();
+  if (!apiKey) {
+    document.getElementById('cloud-status').textContent = 'Enter an API key';
+    document.getElementById('cloud-status').className = 'mp-remote-status err';
+    return;
+  }
+  _savedCloudKeys[providerId] = apiKey;
+  localStorage.setItem('cloudKeys', JSON.stringify(_savedCloudKeys));
+  const prov = _cloudProviders.find(p => p.id === providerId);
+  if (prov) prov.connected = true;
+  renderCloudProviderChips();
+  document.getElementById('cloud-key-row').style.display = 'none';
+  await loadCloudModels(providerId, apiKey);
+}
+
+async function loadCloudModels(providerId, apiKey) {
+  const mpBody = document.getElementById('mp-body');
+  mpBody.innerHTML = '<div class="mp-loading">⏳ Loading models…</div>';
+
+  const key = apiKey || _savedCloudKeys[providerId] || '';
+  const body = key ? JSON.stringify({api_key: key}) : '{}';
+
+  try {
+    const resp = await fetch(`/api/cloud-providers/${providerId}/models`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    });
+    const data = await resp.json();
+    if (data.error) {
+      mpBody.innerHTML = `<div class="mp-empty" style="color:var(--error)">${esc(data.error)}</div>`;
+      _cloudModelsLoaded = false;
+      return;
+    }
+    _cloudModels = data.models || [];
+    _cloudModelsLoaded = true;
+
+    const prov = _cloudProviders.find(p => p.id === providerId);
+    const provName = prov ? prov.name : providerId;
+    const baseUrl = data.base_url || (prov ? prov.base_url : '');
+
+    if (_cloudModels.length) {
+      const groups = [{
+        label: provName,
+        models: _cloudModels,
+        provider: providerId,
+        base_url: baseUrl,
+        api_key: key,
+      }];
+      const q = document.getElementById('mp-search').value || '';
+      mpBody.innerHTML = _buildModelListHtml(groups, q);
+    } else {
+      mpBody.innerHTML = '<div class="mp-empty">No models found for this provider</div>';
+    }
+  } catch (err) {
+    mpBody.innerHTML = `<div class="mp-empty" style="color:var(--error)">Failed: ${esc(err.message)}</div>`;
+    _cloudModelsLoaded = false;
+  }
+}
+
+function renderCloudTab() {
+  if (_selectedCloudProvider && _cloudModelsLoaded && _cloudModels.length) {
+    const prov = _cloudProviders.find(p => p.id === _selectedCloudProvider);
+    const key = _savedCloudKeys[_selectedCloudProvider] || '';
+    const groups = [{
+      label: prov ? prov.name : _selectedCloudProvider,
+      models: _cloudModels,
+      provider: _selectedCloudProvider,
+      base_url: prov ? prov.base_url : '',
+      api_key: key,
+    }];
+    const q = document.getElementById('mp-search').value || '';
+    document.getElementById('mp-body').innerHTML = _buildModelListHtml(groups, q);
+  } else if (_selectedCloudProvider) {
+    loadCloudModels(_selectedCloudProvider);
+  } else {
+    document.getElementById('mp-body').innerHTML = '<div class="mp-empty">Select a cloud provider to browse models</div>';
   }
 }
 
@@ -1417,6 +2121,316 @@ function setStatus(msg) {
     }
   } catch {}
 })();
+
+// ── Project sidebar ──────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const resp = await fetch('/api/projects');
+    _projects = await resp.json();
+    renderProjectList();
+  } catch (err) {
+    console.error('Failed to load projects:', err);
+  }
+}
+
+function renderProjectList() {
+  const list = document.getElementById('sb-list');
+  const noProjEl = document.getElementById('sb-no-proj');
+  // Remove all items except the "no project" entry
+  list.querySelectorAll('.sb-item').forEach(el => el.remove());
+  noProjEl.className = 'sb-no-project' + (activeProjectId ? '' : ' active');
+
+  for (const p of _projects) {
+    const item = document.createElement('div');
+    item.className = 'sb-item' + (p.id === activeProjectId ? ' active' : '');
+    item.onclick = () => selectProject(p.id);
+    item.innerHTML = `
+      <div class="sb-item-name">${esc(p.name)}</div>
+      <div class="sb-item-meta">${p.doc_count || 0} docs · ~${(p.total_tokens || 0).toLocaleString()} tokens</div>
+    `;
+    // Right-click to delete
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (confirm('Delete project "' + p.name + '" and all its documents?')) {
+        deleteProject(p.id);
+      }
+    });
+    list.appendChild(item);
+  }
+
+  updateProjectBadge();
+}
+
+function selectProject(id) {
+  activeProjectId = id;
+  if (id) localStorage.setItem('activeProjectId', id);
+  else localStorage.removeItem('activeProjectId');
+  renderProjectList();
+  loadDocs();
+}
+
+function updateProjectBadge() {
+  const badge = document.getElementById('project-badge');
+  if (activeProjectId) {
+    const proj = _projects.find(p => p.id === activeProjectId);
+    badge.textContent = '📂 ' + (proj ? proj.name : 'Project');
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+async function deleteProject(id) {
+  try {
+    await fetch('/api/projects/' + id, { method: 'DELETE' });
+    if (activeProjectId === id) selectProject(null);
+    loadProjects();
+  } catch (err) {
+    alert('Failed to delete project: ' + err.message);
+  }
+}
+
+// ── New project modal ────────────────────────────────────────────────
+function promptNewProject() {
+  document.getElementById('proj-name').value = '';
+  document.getElementById('proj-desc').value = '';
+  document.getElementById('new-proj-modal').classList.add('open');
+  setTimeout(() => document.getElementById('proj-name').focus(), 50);
+}
+function closeNewProjModal() {
+  document.getElementById('new-proj-modal').classList.remove('open');
+}
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) return;
+  const desc = document.getElementById('proj-desc').value.trim();
+  const btn = document.getElementById('proj-save-btn');
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc }),
+    });
+    const proj = await resp.json();
+    closeNewProjModal();
+    await loadProjects();
+    selectProject(proj.id);
+  } catch (err) {
+    alert('Failed to create project: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+// Enter key in project name
+document.getElementById('proj-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveProject();
+});
+
+// ── Document management ──────────────────────────────────────────────
+async function loadDocs() {
+  const docsPanel = document.getElementById('sb-docs');
+  const docList = document.getElementById('sb-doc-list');
+  if (!activeProjectId) {
+    docsPanel.classList.remove('open');
+    return;
+  }
+  docsPanel.classList.add('open');
+  try {
+    const resp = await fetch('/api/projects/' + activeProjectId + '/documents');
+    const docs = await resp.json();
+    if (!docs.length) {
+      docList.innerHTML = '<div class="sb-doc-empty">No documents yet</div>';
+    } else {
+      docList.innerHTML = docs.map(d => `
+        <div class="sb-doc-item" onclick="viewDocument('${d.id}')" style="cursor:pointer">
+          <span class="sb-doc-name" title="${esc(d.title)}">${esc(d.title)}</span>
+          <span class="sb-doc-type">${esc(d.doc_type)}</span>
+          <span class="sb-doc-tokens">~${d.token_count}</span>
+          <button class="sb-doc-del" onclick="event.stopPropagation(); deleteDoc('${d.id}')" title="Delete">✕</button>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    docList.innerHTML = '<div class="sb-doc-empty">Failed to load</div>';
+  }
+}
+
+async function deleteDoc(docId) {
+  if (!confirm('Delete this document?')) return;
+  try {
+    await fetch('/api/documents/' + docId, { method: 'DELETE' });
+    loadDocs();
+    loadProjects();  // refresh token counts
+  } catch (err) {
+    alert('Failed to delete: ' + err.message);
+  }
+}
+
+function openAddDocModal() {
+  if (!activeProjectId) return;
+  document.getElementById('doc-title').value = '';
+  document.getElementById('doc-type').value = 'other';
+  document.getElementById('doc-content').value = '';
+  document.getElementById('add-doc-modal').classList.add('open');
+  setTimeout(() => document.getElementById('doc-title').focus(), 50);
+}
+function closeAddDocModal() {
+  document.getElementById('add-doc-modal').classList.remove('open');
+}
+async function saveDocument() {
+  const title = document.getElementById('doc-title').value.trim();
+  const content = document.getElementById('doc-content').value.trim();
+  const docType = document.getElementById('doc-type').value;
+  if (!title || !content) { alert('Title and content are required'); return; }
+  const btn = document.getElementById('doc-save-btn');
+  btn.disabled = true;
+  try {
+    await fetch('/api/projects/' + activeProjectId + '/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, doc_type: docType }),
+    });
+    closeAddDocModal();
+    loadDocs();
+    loadProjects();  // refresh token counts
+  } catch (err) {
+    alert('Failed to save: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Close modals on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeAddDocModal();
+    closeNewProjModal();
+    closeViewDocModal();
+  }
+});
+
+// ── File upload handling ──────────────────────────────────────────────
+(function initFileUpload() {
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileName = document.getElementById('file-name');
+
+  function handleFile(file) {
+    if (!file) return;
+    fileName.textContent = file.name;
+    // Auto-fill title if empty
+    const titleEl = document.getElementById('doc-title');
+    if (!titleEl.value.trim()) {
+      titleEl.value = file.name.replace(/\.[^.]+$/, '');
+    }
+    // Auto-detect doc type from extension
+    const ext = file.name.split('.').pop().toLowerCase();
+    const typeMap = { md: 'notes', json: 'api_spec', yaml: 'notes', yml: 'notes', csv: 'other' };
+    if (typeMap[ext]) document.getElementById('doc-type').value = typeMap[ext];
+    // Read content
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('doc-content').value = e.target.result;
+    };
+    reader.readAsText(file);
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    handleFile(e.dataTransfer.files[0]);
+  });
+})();
+
+// ── View / Edit document ─────────────────────────────────────────────
+let _viewingDocId = null;
+
+async function viewDocument(docId) {
+  try {
+    const resp = await fetch('/api/documents/' + docId);
+    const doc = await resp.json();
+    if (doc.error) { alert(doc.error); return; }
+    _viewingDocId = docId;
+    document.getElementById('view-doc-title').textContent = '📄 ' + doc.title;
+    document.getElementById('view-doc-meta').innerHTML =
+      `<span>Type: ${esc(doc.doc_type)}</span>` +
+      `<span>~${doc.token_count} tokens</span>` +
+      `<span>${new Date(doc.created_at).toLocaleDateString()}</span>`;
+    document.getElementById('view-doc-content').textContent = doc.content;
+    document.getElementById('view-doc-modal').classList.add('open');
+  } catch (err) {
+    alert('Failed to load document: ' + err.message);
+  }
+}
+
+function closeViewDocModal() {
+  document.getElementById('view-doc-modal').classList.remove('open');
+  _viewingDocId = null;
+}
+
+function editDocFromView() {
+  // Re-open add-doc modal pre-filled for editing (delete old + create new)
+  const content = document.getElementById('view-doc-content').textContent;
+  const title = document.getElementById('view-doc-title').textContent.replace(/^📄 /, '');
+  closeViewDocModal();
+  openAddDocModal();
+  document.getElementById('doc-title').value = title;
+  document.getElementById('doc-content').value = content;
+  // Store old doc id to delete on save
+  window._editingDocId = _viewingDocId;
+}
+
+// Patch saveDocument to handle edit mode
+const _origSaveDocument = saveDocument;
+saveDocument = async function() {
+  const oldId = window._editingDocId;
+  // Save new version
+  const title = document.getElementById('doc-title').value.trim();
+  const content = document.getElementById('doc-content').value.trim();
+  const docType = document.getElementById('doc-type').value;
+  if (!title || !content) { alert('Title and content are required'); return; }
+  const btn = document.getElementById('doc-save-btn');
+  btn.disabled = true;
+  try {
+    // Delete old version if editing
+    if (oldId) {
+      await fetch('/api/documents/' + oldId, { method: 'DELETE' }).catch(() => {});
+    }
+    await fetch('/api/projects/' + activeProjectId + '/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, doc_type: docType }),
+    });
+    closeAddDocModal();
+    loadDocs();
+    loadProjects();
+  } catch (err) {
+    alert('Failed to save: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    window._editingDocId = null;
+  }
+};
+
+// Reset file input when opening add-doc modal
+const _origOpenAddDocModal = openAddDocModal;
+openAddDocModal = function() {
+  window._editingDocId = null;
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('file-input').value = '';
+  _origOpenAddDocModal();
+};
+
+// ── Init projects on load ────────────────────────────────────────────
+loadProjects().then(() => loadDocs());
 
 // ── Init remote config inputs from localStorage ──────────────────────
 (function initRemoteConfig() {
