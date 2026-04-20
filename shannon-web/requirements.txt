@@ -1,0 +1,12 @@
+# shannon-web runtime dependencies
+# Install: pip install -r requirements.txt
+#
+# Parent hermes-agent deps (run_agent.py, hermes_cli.*, tools.*) are expected
+# to be installed via the root requirements.txt.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5
+pyyaml>=6.0
+
+# Tests
+pytest>=7.4

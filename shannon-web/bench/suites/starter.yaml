@@ -1,0 +1,129 @@
+name: Starter Suite
+description: A mixed suite covering factual QA, reasoning, coding and multi-step tasks. Good for quickly comparing patterns.
+version: 1
+
+# Each task has:
+#   id: unique identifier
+#   category: factual | reasoning | code | multi_step
+#   prompt: the question to send to the agent
+#   grader: how to score (one of):
+#       exact      — final answer must contain any of `expected_any`
+#       regex      — final answer must match `expected_regex`
+#       llm_judge  — auxiliary LLM grades 0-10 given `rubric`
+#   expected_any: [list of strings] (for exact)
+#   expected_regex: "..."            (for regex)
+#   rubric: "grading criteria text"  (for llm_judge)
+#   weight: optional 1.0 multiplier for scoring
+
+tasks:
+  - id: capital_france
+    category: factual
+    prompt: "What is the capital of France? Answer with just the city name."
+    grader: exact
+    expected_any: ["Paris", "paris"]
+
+  - id: pi_digits
+    category: factual
+    prompt: "State the first 5 digits of pi (including the leading 3)."
+    grader: regex
+    expected_regex: "3\\.?14159"
+
+  - id: simple_arithmetic
+    category: reasoning
+    prompt: "If a train leaves at 2:15pm and arrives 3 hours 45 minutes later, what time does it arrive? Give a 12-hour time."
+    grader: exact
+    expected_any: ["6:00", "6:00pm", "6:00 pm", "6pm"]
+
+  - id: logic_puzzle
+    category: reasoning
+    prompt: |
+      Alice, Bob, and Carol sit in a row. Alice is not on the left. Bob is directly to the right of Alice.
+      Who sits on the left? Answer with just the name.
+    grader: exact
+    expected_any: ["Carol", "carol"]
+
+  - id: word_problem
+    category: reasoning
+    prompt: |
+      A shop sells pens at $2 each and notebooks at $5 each. I buy 3 pens and 2 notebooks.
+      What is the total cost in dollars? Answer with just the number.
+    grader: regex
+    expected_regex: "\\b16\\b"
+
+  - id: fibonacci_8
+    category: code
+    prompt: |
+      Compute the 8th Fibonacci number where fib(1)=1, fib(2)=1. Give only the number.
+    grader: regex
+    expected_regex: "\\b21\\b"
+
+  - id: list_even
+    category: code
+    prompt: |
+      Given the list [3, 8, 15, 22, 7, 4, 11, 18], how many even numbers are in it? Give only the number.
+    grader: regex
+    expected_regex: "\\b4\\b"
+
+  - id: json_extract
+    category: multi_step
+    prompt: |
+      The JSON object is: {"user": {"name": "Lily", "age": 12, "hobbies": ["reading", "piano"]}}
+      What is the user's second hobby?
+    grader: exact
+    expected_any: ["piano"]
+
+  - id: summarize_short
+    category: multi_step
+    prompt: |
+      Summarize this in exactly one sentence:
+      "The mitochondrion is a double-membrane-bound organelle found in most eukaryotic cells.
+      Mitochondria generate most of the cell's supply of adenosine triphosphate (ATP), used as
+      a source of chemical energy. Hence they are often called the 'powerhouse of the cell.'"
+    grader: llm_judge
+    rubric: |
+      Score 0-10 based on:
+      (a) One sentence only (no fragments, no bullets)
+      (b) Captures that mitochondria produce ATP / energy for cells
+      (c) Accurate and concise
+      A perfect answer is a single sentence that correctly states mitochondria produce ATP/energy for the cell.
+
+  - id: translate_greeting
+    category: factual
+    prompt: "Translate 'good morning' into Japanese using romaji. Answer with just the romaji phrase."
+    grader: regex
+    expected_regex: "ohayou|ohayō|ohayo"
+
+  - id: counting_letters
+    category: reasoning
+    prompt: "How many letter 'r's are in the word 'strawberry'? Answer with just the number."
+    grader: regex
+    expected_regex: "\\b3\\b"
+
+  - id: reversal
+    category: code
+    prompt: "Reverse the string 'hello world'. Give only the reversed string."
+    grader: exact
+    expected_any: ["dlrow olleh"]
+
+  - id: explain_concept
+    category: multi_step
+    prompt: "Explain in 2-3 sentences what a hash table is and why it's useful."
+    grader: llm_judge
+    rubric: |
+      Score 0-10 based on:
+      (a) Correctly describes hash tables (key-value, hash function, O(1) average lookup)
+      (b) 2-3 sentences in length
+      (c) Clear and technically accurate
+      10 = perfect. 5 = partially correct or wrong length. 0 = incorrect or irrelevant.
+
+  - id: date_arithmetic
+    category: reasoning
+    prompt: "If today is Friday, what day of the week will it be 10 days from now? Answer with just the day name."
+    grader: exact
+    expected_any: ["Monday", "monday"]
+
+  - id: classification
+    category: factual
+    prompt: "Is a whale a fish or a mammal? Answer with one word."
+    grader: exact
+    expected_any: ["Mammal", "mammal"]

@@ -15,6 +15,7 @@ import json
 import re
 import sqlite3
 import textwrap
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,6 +93,9 @@ class ProjectStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
+        # SQLite connections are not safe for concurrent writes from multiple
+        # threads even with check_same_thread=False. Serialise all access.
+        self._lock = threading.Lock()
         self._init_tables()
 
     # ── Schema ────────────────────────────────────────────────────────
@@ -165,31 +169,34 @@ class ProjectStore:
     def create_project(self, name: str, description: str = "") -> dict:
         pid = uuid.uuid4().hex[:12]
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO projects (id, name, description, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (pid, name, description, now, now),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO projects (id, name, description, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (pid, name, description, now, now),
+            )
+            self._conn.commit()
         return {"id": pid, "name": name, "description": description,
                 "created_at": now, "updated_at": now}
 
     def list_projects(self) -> list[dict]:
-        rows = self._conn.execute(
-            "SELECT p.*, "
-            "  (SELECT COUNT(*) FROM documents WHERE project_id = p.id) AS doc_count, "
-            "  (SELECT COALESCE(SUM(token_count), 0) FROM documents WHERE project_id = p.id) AS total_tokens "
-            "FROM projects p ORDER BY p.updated_at DESC"
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT p.*, "
+                "  (SELECT COUNT(*) FROM documents WHERE project_id = p.id) AS doc_count, "
+                "  (SELECT COALESCE(SUM(token_count), 0) FROM documents WHERE project_id = p.id) AS total_tokens "
+                "FROM projects p ORDER BY p.updated_at DESC"
+            ).fetchall()
         return [dict(r) for r in rows]
 
     def get_project(self, project_id: str) -> Optional[dict]:
-        row = self._conn.execute(
-            "SELECT p.*, "
-            "  (SELECT COUNT(*) FROM documents WHERE project_id = p.id) AS doc_count, "
-            "  (SELECT COALESCE(SUM(token_count), 0) FROM documents WHERE project_id = p.id) AS total_tokens "
-            "FROM projects p WHERE p.id = ?", (project_id,)
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT p.*, "
+                "  (SELECT COUNT(*) FROM documents WHERE project_id = p.id) AS doc_count, "
+                "  (SELECT COALESCE(SUM(token_count), 0) FROM documents WHERE project_id = p.id) AS total_tokens "
+                "FROM projects p WHERE p.id = ?", (project_id,)
+            ).fetchone()
         return dict(row) if row else None
 
     def update_project(self, project_id: str, name: str = None, description: str = None) -> Optional[dict]:
@@ -199,16 +206,18 @@ class ProjectStore:
         name = name if name is not None else proj["name"]
         desc = description if description is not None else proj["description"]
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "UPDATE projects SET name=?, description=?, updated_at=? WHERE id=?",
-            (name, desc, now, project_id),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "UPDATE projects SET name=?, description=?, updated_at=? WHERE id=?",
+                (name, desc, now, project_id),
+            )
+            self._conn.commit()
         return self.get_project(project_id)
 
     def delete_project(self, project_id: str) -> bool:
-        cur = self._conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
-        self._conn.commit()
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+            self._conn.commit()
         return cur.rowcount > 0
 
     # ── Documents ─────────────────────────────────────────────────────
@@ -218,50 +227,50 @@ class ProjectStore:
         doc_id = uuid.uuid4().hex[:12]
         now = datetime.now(timezone.utc).isoformat()
         tokens = estimate_tokens(content)
-
-        self._conn.execute(
-            "INSERT INTO documents (id, project_id, title, content, doc_type, token_count, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (doc_id, project_id, title, content, doc_type, tokens, now),
-        )
-
-        # Chunk and insert
         chunks = chunk_text(content)
-        for idx, chunk in enumerate(chunks):
-            self._conn.execute(
-                "INSERT INTO doc_chunks (doc_id, project_id, chunk_idx, content) "
-                "VALUES (?, ?, ?, ?)",
-                (doc_id, project_id, idx, chunk),
-            )
 
-        # Touch project updated_at
-        self._conn.execute(
-            "UPDATE projects SET updated_at = ? WHERE id = ?",
-            (datetime.now(timezone.utc).isoformat(), project_id),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO documents (id, project_id, title, content, doc_type, token_count, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (doc_id, project_id, title, content, doc_type, tokens, now),
+            )
+            for idx, chunk in enumerate(chunks):
+                self._conn.execute(
+                    "INSERT INTO doc_chunks (doc_id, project_id, chunk_idx, content) "
+                    "VALUES (?, ?, ?, ?)",
+                    (doc_id, project_id, idx, chunk),
+                )
+            self._conn.execute(
+                "UPDATE projects SET updated_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), project_id),
+            )
+            self._conn.commit()
 
         return {"id": doc_id, "project_id": project_id, "title": title,
                 "doc_type": doc_type, "token_count": tokens,
                 "chunk_count": len(chunks), "created_at": now}
 
     def list_documents(self, project_id: str) -> list[dict]:
-        rows = self._conn.execute(
-            "SELECT id, project_id, title, doc_type, token_count, created_at "
-            "FROM documents WHERE project_id = ? ORDER BY created_at DESC",
-            (project_id,),
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, project_id, title, doc_type, token_count, created_at "
+                "FROM documents WHERE project_id = ? ORDER BY created_at DESC",
+                (project_id,),
+            ).fetchall()
         return [dict(r) for r in rows]
 
     def get_document(self, doc_id: str) -> Optional[dict]:
-        row = self._conn.execute(
-            "SELECT * FROM documents WHERE id = ?", (doc_id,)
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT * FROM documents WHERE id = ?", (doc_id,)
+            ).fetchone()
         return dict(row) if row else None
 
     def delete_document(self, doc_id: str) -> bool:
-        cur = self._conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
-        self._conn.commit()
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+            self._conn.commit()
         return cur.rowcount > 0
 
     # ── Context Retrieval (the key feature) ───────────────────────────
@@ -296,32 +305,34 @@ class ProjectStore:
             if terms:
                 fts_query = ' OR '.join(terms)
                 try:
-                    rows = self._conn.execute(
-                        "SELECT c.content, c.chunk_idx, d.title, d.doc_type, "
-                        "       rank "
-                        "FROM doc_chunks_fts f "
-                        "JOIN doc_chunks c ON c.id = f.rowid "
-                        "JOIN documents d ON d.id = c.doc_id "
-                        "WHERE c.project_id = ? AND doc_chunks_fts MATCH ? "
-                        "ORDER BY rank "
-                        "LIMIT ?",
-                        (project_id, fts_query, max_chunks),
-                    ).fetchall()
+                    with self._lock:
+                        rows = self._conn.execute(
+                            "SELECT c.content, c.chunk_idx, d.title, d.doc_type, "
+                            "       rank "
+                            "FROM doc_chunks_fts f "
+                            "JOIN doc_chunks c ON c.id = f.rowid "
+                            "JOIN documents d ON d.id = c.doc_id "
+                            "WHERE c.project_id = ? AND doc_chunks_fts MATCH ? "
+                            "ORDER BY rank "
+                            "LIMIT ?",
+                            (project_id, fts_query, max_chunks),
+                        ).fetchall()
                     chunks = [dict(r) for r in rows]
                 except sqlite3.OperationalError:
                     pass  # FTS query syntax issue, fall through
 
         # Fallback: if no FTS results, return first N chunks (chronological)
         if not chunks:
-            rows = self._conn.execute(
-                "SELECT c.content, c.chunk_idx, d.title, d.doc_type "
-                "FROM doc_chunks c "
-                "JOIN documents d ON d.id = c.doc_id "
-                "WHERE c.project_id = ? "
-                "ORDER BY d.created_at, c.chunk_idx "
-                "LIMIT ?",
-                (project_id, max_chunks),
-            ).fetchall()
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT c.content, c.chunk_idx, d.title, d.doc_type "
+                    "FROM doc_chunks c "
+                    "JOIN documents d ON d.id = c.doc_id "
+                    "WHERE c.project_id = ? "
+                    "ORDER BY d.created_at, c.chunk_idx "
+                    "LIMIT ?",
+                    (project_id, max_chunks),
+                ).fetchall()
             chunks = [dict(r) for r in rows]
 
         if not chunks:

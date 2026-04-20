@@ -4,25 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hermes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f0f13;
-      --surface:   #18181f;
-      --border:    #2a2a36;
-      --accent:    #c9a752;
-      --accent-dim:#7a6330;
-      --text:      #e8e6df;
-      --text-dim:  #888;
-      --user-bg:   #1e1e2a;
-      --agent-bg:  #161620;
-      --tool-bg:   #111118;
-      --tool-text: #5a9a72;
-      --error:     #cc5555;
-      --radius:    12px;
+      --bg:        #07090e;
+      --bg-2:      #0b1018;
+      --surface:   #0e141d;
+      --surface-2: #121a26;
+      --border:    #1c2a3d;
+      --border-hi: #2a4566;
+      --accent:    #38d0ff;           /* JARVIS cyan */
+      --accent-2:  #6ef0ff;
+      --accent-dim:#1a6a8a;
+      --accent-glow: rgba(56,208,255,0.35);
+      --warn:      #ffb545;
+      --ok:        #55ffa0;
+      --text:      #d9ecff;
+      --text-dim:  #6b8296;
+      --user-bg:   #0f1827;
+      --agent-bg:  #0b1320;
+      --tool-bg:   #070d15;
+      --tool-text: #55ffa0;
+      --error:     #ff5f73;
+      --radius:    10px;
       --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --font-display: 'Orbitron', 'Eurostile', 'Rajdhani', -apple-system, sans-serif;
     }
+
+    /* JARVIS HUD grid overlay */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(56,208,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,208,255,0.035) 1px, transparent 1px),
+        radial-gradient(circle at 20% 10%, rgba(56,208,255,0.08), transparent 55%),
+        radial-gradient(circle at 85% 90%, rgba(110,240,255,0.06), transparent 55%);
+      background-size: 48px 48px, 48px 48px, auto, auto;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,0.35));
+    }
+    #shell, #sidebar, #app { position: relative; z-index: 1; }
 
     html, body {
       height: 100%;
@@ -329,25 +364,44 @@
       padding: 14px 20px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      background: linear-gradient(90deg, rgba(56,208,255,0.04), transparent 60%);
+      position: relative;
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: -1px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.5;
     }
     .logo {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.05rem;
+      font-weight: 700;
       color: var(--accent);
-      letter-spacing: 0.03em;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      text-shadow: 0 0 12px var(--accent-glow);
     }
-    .logo span { color: var(--text-dim); font-weight: 400; font-size: 0.85rem; }
-    #btn-new {
-      background: none;
-      border: 1px solid var(--border);
+    .logo span { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.2em; }
+    #btn-new, #btn-dashboard {
+      background: rgba(56,208,255,0.04);
+      border: 1px solid var(--border-hi);
       color: var(--text-dim);
       padding: 5px 12px;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 0.82rem;
-      transition: border-color 0.15s, color 0.15s;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+      font-family: var(--font-display);
     }
-    #btn-new:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-new:hover, #btn-dashboard:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
 
     /* ── Messages ── */
     #messages {
@@ -642,6 +696,111 @@
     }
     #send-btn:hover { opacity: 0.85; }
     #send-btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Quote ── */
+    #quote {
+      font-size: 0.62rem;
+      color: #4a5568;
+      font-style: italic;
+      line-height: 1.4;
+      padding: 4px 2px 0;
+    }
+
+    /* ── Connection status ── */
+    #conn-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      margin-left: 8px;
+    }
+    #conn-status .conn-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    #conn-status.idle .conn-dot { background: var(--text-dim); }
+    #conn-status.connecting .conn-dot { background: var(--warn); animation: blink 1s ease-in-out infinite; }
+    #conn-status.connected .conn-dot { background: var(--ok); }
+    #conn-status.error .conn-dot { background: var(--error); }
+    #conn-status.connecting { color: var(--warn); }
+    #conn-status.connected { color: var(--ok); }
+    #conn-status.error { color: var(--error); }
+
+    /* ── Context window bar ── */
+    #context-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 2px;
+      margin-top: 2px;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #context-bar.visible { opacity: 1; }
+    .ctx-meter {
+      flex: 1;
+      max-width: 180px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .ctx-meter-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease, background 0.3s;
+    }
+    .ctx-meter-fill.warn { background: var(--warn); }
+    .ctx-meter-fill.danger { background: var(--error); }
+
+    /* ── Persistent thinking (not removed on response) ── */
+    .thinking-row.persistent {
+      opacity: 0.5;
+    }
+    .thinking-row.persistent .pulse {
+      animation: none;
+      background: var(--text-dim);
+    }
+
+    /* Status rows (retry, timeout, reconnect info) */
+    .status-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 3px 0;
+      font-size: 0.72rem;
+      color: var(--warn);
+      font-family: var(--font-mono);
+      line-height: 1.4;
+      animation: fadein 0.2s ease;
+    }
+    .status-row.error { color: var(--error); }
+    .status-row .status-icon { flex-shrink: 0; }
+
+    #review-toggle {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: all 0.2s;
+      align-self: flex-end;
+    }
+    #review-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    #review-toggle.active { background: #a78bfa22; border-color: #a78bfa; color: #a78bfa; }
+
+    .review-phase { color: #c4b5fd; }
+    .review-verdict { color: #fde68a; }
 
     #status {
       text-align: center;
@@ -957,6 +1116,449 @@
     .pop-btn-switch:disabled { opacity:.35; cursor:default; }
     .pop-btn-cancel { background:none; border:1px solid var(--border); color:var(--text-dim); padding:7px 12px; border-radius:6px; cursor:pointer; font-size:.85rem; transition:border-color .15s; }
     .pop-btn-cancel:hover { border-color:var(--text-dim); color:var(--text); }
+
+    /* ── Dashboard ── */
+    .dashboard-box {
+      width: 960px !important;
+      max-width: 95vw !important;
+      max-height: 88vh !important;
+      border-color: var(--border-hi) !important;
+      box-shadow: 0 0 40px rgba(56,208,255,0.15), inset 0 0 30px rgba(56,208,255,0.03);
+      background: linear-gradient(135deg, var(--surface), var(--surface-2)) !important;
+    }
+    .dash-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border-hi);
+      margin-bottom: 4px;
+    }
+    .dash-header h3 {
+      font-family: var(--font-display);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent) !important;
+      font-size: 1rem !important;
+      text-shadow: 0 0 10px var(--accent-glow);
+    }
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      overflow-y: auto;
+      padding: 4px 2px 4px 0;
+    }
+    .dash-loading { grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 40px; font-family: var(--font-display); letter-spacing: 0.1em; }
+    .dash-card {
+      background: rgba(14,20,29,0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .dash-card::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.4;
+    }
+    .dash-card:hover { border-color: var(--accent-dim); box-shadow: 0 0 20px rgba(56,208,255,0.1); }
+    .dash-card h4 {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .dash-card .dash-metric {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 14px var(--accent-glow);
+    }
+    .dash-card .dash-unit { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; margin-left: 4px; }
+    .dash-card .dash-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
+    .dash-card.span-2 { grid-column: span 2; }
+    .dash-list { max-height: 180px; overflow-y: auto; margin-top: 6px; }
+    .dash-list-item {
+      padding: 5px 8px;
+      font-size: 0.76rem;
+      border-left: 2px solid var(--accent-dim);
+      background: rgba(56,208,255,0.04);
+      margin-bottom: 3px;
+      border-radius: 0 4px 4px 0;
+      color: var(--text);
+    }
+    .dash-list-item .di-sub { color: var(--text-dim); font-size: 0.7rem; display: block; margin-top: 2px; }
+
+    /* Dashboard tabs */
+    .dash-tabs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .dash-tab-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      transition: all .15s;
+    }
+    .dash-tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .dash-tab-btn.active {
+      background: rgba(56,208,255,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .dash-pane { overflow-y: auto; max-height: 72vh; padding: 4px 2px; }
+
+    /* Extension cards (MCP / Skills / Tools) */
+    .ext-section { margin-bottom: 18px; }
+    .ext-section-title {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 8px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ext-card {
+      background: rgba(56,208,255,0.03);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-dim);
+      border-radius: 3px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      transition: all .15s;
+    }
+    .ext-card:hover { border-color: var(--accent); background: rgba(56,208,255,0.06); }
+    .ext-card-body { flex: 1; min-width: 0; }
+    .ext-card-name {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ext-card-desc { color: var(--text-dim); font-size: 0.72rem; margin-top: 4px; line-height: 1.4; }
+    .ext-card-tags { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .ext-tag {
+      font-size: 0.62rem;
+      padding: 1px 6px;
+      background: rgba(56,208,255,0.08);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+    }
+    .ext-badge {
+      font-size: 0.6rem;
+      padding: 1px 6px;
+      border-radius: 2px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .ext-badge.ok { background: rgba(85,255,160,0.1); border: 1px solid var(--ok); color: var(--ok); }
+    .ext-badge.warn { background: rgba(255,170,60,0.1); border: 1px solid #ffaa3c; color: #ffaa3c; }
+    .ext-badge.err { background: rgba(255,100,100,0.1); border: 1px solid var(--error); color: var(--error); }
+    .ext-badge.dim { background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text-dim); }
+    .ext-btn {
+      background: transparent;
+      border: 1px solid var(--accent-dim);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-family: var(--font-display);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .ext-btn:hover:not(:disabled) { background: rgba(56,208,255,0.1); border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    .ext-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .ext-btn.danger { border-color: rgba(255,100,100,0.4); color: var(--error); }
+    .ext-btn.danger:hover:not(:disabled) { background: rgba(255,100,100,0.1); border-color: var(--error); box-shadow: 0 0 8px rgba(255,100,100,0.3); }
+    .ext-input {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .ext-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 6px var(--accent-glow); }
+    .ext-empty { color: var(--text-dim); font-size: 0.75rem; padding: 10px; text-align: center; font-style: italic; }
+
+    /* Self-suggest toast */
+    .suggest-toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      max-width: 360px;
+      background: rgba(12,18,28,0.98);
+      border: 1px solid var(--accent);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      padding: 14px 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 24px var(--accent-glow);
+      z-index: 10000;
+      animation: suggestSlideIn 0.35s ease-out;
+      font-family: var(--font-display);
+    }
+    @keyframes suggestSlideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .suggest-toast.closing { animation: suggestSlideOut 0.25s ease-in forwards; }
+    @keyframes suggestSlideOut {
+      to { transform: translateX(400px); opacity: 0; }
+    }
+    .suggest-title { color: var(--accent); font-size: 0.78rem; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .suggest-body { color: var(--text); font-size: 0.8rem; line-height: 1.45; margin-bottom: 12px; font-family: var(--font-mono); }
+    .suggest-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .dash-list::-webkit-scrollbar { width: 4px; }
+    .dash-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+    /* ── Pull progress bar ── */
+    .pull-progress {
+      margin: 6px auto 14px;
+      max-width: 520px;
+      padding: 10px 14px;
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      background: rgba(14,20,29,0.7);
+      font-size: 0.76rem;
+      position: relative;
+    }
+    .pull-progress::before {
+      content: "";
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .pull-progress .pp-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+      font-family: var(--font-display);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent);
+      font-size: 0.72rem;
+    }
+    .pull-progress .pp-status { color: var(--text-dim); font-family: var(--font-mono); letter-spacing: 0; text-transform: none; }
+    .pp-bar-wrap {
+      height: 6px; background: var(--bg-2); border-radius: 3px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .pp-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent), var(--accent-2));
+      width: 0%;
+      transition: width 0.3s;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .pp-meta { margin-top: 4px; color: var(--text-dim); font-family: var(--font-mono); font-size: 0.7rem; }
+    .pull-progress.done .pp-bar { background: var(--ok); }
+    .pull-progress.error { border-color: var(--error); }
+    .pull-progress.error .pp-head { color: var(--error); }
+
+    /* ── Benchmark lab ── */
+    .bench-tab-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      transition: all .15s;
+    }
+    .bench-tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .bench-tab-btn.active {
+      background: rgba(56,208,255,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .bench-pane { overflow-y: auto; max-height: 72vh; padding: 4px 2px; }
+    .bench-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 12px;
+      background: rgba(14,20,29,0.5);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .bench-ctl { display: flex; flex-direction: column; gap: 4px; }
+    .bench-ctl label {
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .bench-ctl input, .bench-ctl select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .bench-ctl input:focus, .bench-ctl select:focus { border-color: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+    .bench-run-btn {
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+      color: #07090e;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      box-shadow: 0 0 14px var(--accent-glow);
+      transition: all .15s;
+    }
+    .bench-run-btn:hover { filter: brightness(1.15); }
+    .bench-run-btn:disabled { opacity: 0.4; cursor: default; filter: grayscale(0.5); }
+
+    .bench-live {
+      padding: 12px;
+      background: rgba(14,20,29,0.5);
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    .bench-progress-row {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+    }
+    .bench-progress-label {
+      min-width: 220px;
+      display: flex; justify-content: space-between;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+    .bench-progress-label span:last-child { color: var(--text-dim); font-family: var(--font-mono); }
+    .bench-task-list { max-height: 380px; overflow-y: auto; }
+    .bench-task-item {
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      border-left: 3px solid var(--border);
+      background: rgba(14,20,29,0.4);
+      border-radius: 0 4px 4px 0;
+      font-size: 0.78rem;
+    }
+    .bench-task-item.running { border-left-color: var(--accent); background: rgba(56,208,255,0.06); }
+    .bench-task-item.pass { border-left-color: var(--ok); }
+    .bench-task-item.fail { border-left-color: var(--error); }
+    .bench-task-item .bti-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-mono);
+    }
+    .bench-task-item .bti-id { color: var(--accent); font-weight: 600; }
+    .bench-task-item .bti-verdict { font-family: var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.72rem; }
+    .bench-task-item.pass .bti-verdict { color: var(--ok); }
+    .bench-task-item.fail .bti-verdict { color: var(--error); }
+    .bench-task-item .bti-meta { color: var(--text-dim); font-size: 0.72rem; margin-top: 4px; }
+    .bench-task-item .bti-answer { margin-top: 4px; font-family: var(--font-mono); color: var(--text); font-size: 0.72rem; white-space: pre-wrap; max-height: 60px; overflow: hidden; }
+
+    .bench-history-list { display: flex; flex-direction: column; gap: 6px; }
+    .bench-run-card {
+      padding: 10px 14px;
+      background: rgba(14,20,29,0.5);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .bench-run-card:hover { border-color: var(--accent); box-shadow: 0 0 14px var(--accent-glow); }
+    .bench-run-card .brc-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+    }
+    .bench-run-card .brc-title { font-family: var(--font-display); color: var(--accent); letter-spacing: 0.08em; font-size: 0.85rem; }
+    .bench-run-card .brc-score {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ok);
+      text-shadow: 0 0 8px rgba(85,255,160,0.4);
+    }
+    .bench-run-card .brc-score.low { color: var(--error); text-shadow: 0 0 8px rgba(255,95,115,0.3); }
+    .bench-run-card .brc-score.mid { color: var(--warn); text-shadow: 0 0 8px rgba(255,181,69,0.3); }
+    .bench-run-card .brc-meta {
+      font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+
+    .bench-compare-pickers {
+      display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 16px;
+      padding: 12px; background: rgba(14,20,29,0.5);
+      border: 1px solid var(--border); border-radius: 6px;
+    }
+    .bench-cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .bench-cmp-col { padding: 12px; background: rgba(14,20,29,0.5); border: 1px solid var(--border); border-radius: 6px; }
+    .bench-cmp-col h4 { font-family: var(--font-display); color: var(--accent); letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 8px; }
+    .bench-cmp-task { padding: 6px 10px; border-left: 3px solid; margin-bottom: 3px; font-size: 0.75rem; font-family: var(--font-mono); background: rgba(14,20,29,0.4); }
+    .bench-cmp-task.pass { border-color: var(--ok); }
+    .bench-cmp-task.fail { border-color: var(--error); }
+    .bench-cmp-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+    .bench-cmp-cell { padding: 10px; background: rgba(14,20,29,0.5); border: 1px solid var(--border); border-radius: 4px; text-align: center; }
+    .bench-cmp-cell .cmp-label { font-family: var(--font-display); font-size: 0.68rem; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase; }
+    .bench-cmp-cell .cmp-val { font-family: var(--font-display); font-size: 1.4rem; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+    .bench-cmp-cell .cmp-delta { font-family: var(--font-mono); font-size: 0.8rem; margin-top: 4px; }
+    .cmp-delta.up { color: var(--ok); }
+    .cmp-delta.down { color: var(--error); }
+
+    /* ── JARVIS welcome arc ── */
+    #welcome .big {
+      filter: drop-shadow(0 0 20px var(--accent-glow));
+      animation: pulse-arc 3s ease-in-out infinite;
+    }
+    #welcome h2 {
+      font-family: var(--font-display);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-shadow: 0 0 16px var(--accent-glow);
+    }
+    @keyframes pulse-arc {
+      0%, 100% { filter: drop-shadow(0 0 20px var(--accent-glow)); }
+      50% { filter: drop-shadow(0 0 30px var(--accent-glow)) drop-shadow(0 0 40px var(--accent-glow)); }
+    }
+
   </style>
 </head>
 <body>
@@ -988,6 +1590,8 @@
         <span class="chip-dot"></span>
         <span id="model-label"></span>
       </button>
+      <button id="btn-dashboard" onclick="openDashboard()" title="Agent dashboard">◈ Dashboard</button>
+      <button id="btn-bench" onclick="openBench()" title="Benchmark agent patterns" style="background:rgba(56,208,255,0.04);border:1px solid var(--border-hi);color:var(--text-dim);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;font-family:var(--font-display);transition:all .15s">⎈ Bench</button>
       <button id="btn-new" title="Start a new conversation">New chat</button>
     </div>
   </header>
@@ -1067,12 +1671,19 @@
         <span id="model-bar-label">Choose model</span>
         <span class="mb-caret">▾</span>
       </button>
+      <span id="conn-status" class="idle"><span class="conn-dot"></span><span id="conn-text">Idle</span></span>
     </div>
     <form id="form" onsubmit="return false;">
       <textarea id="input" rows="1" placeholder="Message Hermes…" autofocus></textarea>
+      <button id="review-toggle" type="button" onclick="toggleReviewMode()" title="Dual-agent review mode: solver + reviewer">🔍</button>
       <button id="send-btn" type="submit">Send</button>
     </form>
     <div id="status"></div>
+    <div id="context-bar">
+      <span id="ctx-label">Context: —</span>
+      <div class="ctx-meter"><div class="ctx-meter-fill" id="ctx-fill" style="width:0%"></div></div>
+    </div>
+    <div id="quote">Sometimes it's the people no one imagines anything of who do the things that no one can imagine.</div>
   </div>
 </div><!-- /app -->
 </div><!-- /shell -->
@@ -1136,6 +1747,116 @@
   </div>
 </div>
 
+<!-- Dashboard Modal -->
+<div class="modal-overlay" id="dashboard-modal">
+  <div class="modal-box dashboard-box">
+    <div class="dash-header">
+      <h3>◈ Agent Control Deck</h3>
+      <div class="dash-tabs">
+        <button class="dash-tab-btn active" id="dash-tab-overview" onclick="switchDashTab('overview')">Overview</button>
+        <button class="dash-tab-btn" id="dash-tab-mcp" onclick="switchDashTab('mcp')">🔌 MCP</button>
+        <button class="dash-tab-btn" id="dash-tab-skills" onclick="switchDashTab('skills')">📚 Skills</button>
+        <button class="dash-tab-btn" id="dash-tab-tools" onclick="switchDashTab('tools')">🔧 Tools</button>
+        <button class="modal-btn-cancel" onclick="closeDashboard()" style="margin-left:10px">✕</button>
+      </div>
+    </div>
+    <div id="dash-pane-overview" class="dash-pane">
+      <div class="dash-grid" id="dash-grid">
+        <div class="dash-loading">Initialising telemetry…</div>
+      </div>
+    </div>
+    <div id="dash-pane-mcp" class="dash-pane" style="display:none">
+      <div class="dash-loading">Loading MCP servers…</div>
+    </div>
+    <div id="dash-pane-skills" class="dash-pane" style="display:none">
+      <div class="dash-loading">Loading skills…</div>
+    </div>
+    <div id="dash-pane-tools" class="dash-pane" style="display:none">
+      <div class="dash-loading">Loading tools status…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Benchmark Modal -->
+<div class="modal-overlay" id="bench-modal">
+  <div class="modal-box dashboard-box">
+    <div class="dash-header">
+      <h3>⎈ Benchmark Lab</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="bench-tab-btn active" id="bench-tab-new" onclick="switchBenchTab('new')">New Run</button>
+        <button class="bench-tab-btn" id="bench-tab-history" onclick="switchBenchTab('history')">History</button>
+        <button class="bench-tab-btn" id="bench-tab-compare" onclick="switchBenchTab('compare')">Compare</button>
+        <button class="modal-btn-cancel" onclick="closeBench()" style="margin-left:10px">✕</button>
+      </div>
+    </div>
+
+    <!-- NEW RUN TAB -->
+    <div id="bench-pane-new" class="bench-pane">
+      <div class="bench-controls">
+        <div class="bench-ctl">
+          <label>Suite</label>
+          <select id="bench-suite"></select>
+        </div>
+        <div class="bench-ctl">
+          <label>Pattern</label>
+          <select id="bench-pattern">
+            <option value="single">Single agent (baseline)</option>
+            <option value="dual_review">Dual-agent review (solver + reviewer)</option>
+          </select>
+        </div>
+        <div class="bench-ctl">
+          <label>Model</label>
+          <input id="bench-model" type="text" placeholder="use current model" />
+        </div>
+        <div class="bench-ctl">
+          <label>Note (optional)</label>
+          <input id="bench-note" type="text" placeholder="e.g. claude-opus vs gpt-5" />
+        </div>
+        <div class="bench-ctl">
+          <label>&nbsp;</label>
+          <button class="bench-run-btn" id="bench-run-btn" onclick="startBench()">▶ RUN</button>
+        </div>
+      </div>
+      <div class="bench-live" id="bench-live" style="display:none">
+        <div class="bench-progress-row">
+          <div class="bench-progress-label">
+            <span id="bench-phase">initialising…</span>
+            <span id="bench-counts"></span>
+          </div>
+          <div class="pp-bar-wrap" style="flex:1"><div class="pp-bar" id="bench-bar"></div></div>
+        </div>
+        <div class="bench-task-list" id="bench-task-list"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="bench-pane-history" class="bench-pane" style="display:none">
+      <div class="bench-history-list" id="bench-history-list">
+        <div class="dash-loading">Loading…</div>
+      </div>
+    </div>
+
+    <!-- COMPARE TAB -->
+    <div id="bench-pane-compare" class="bench-pane" style="display:none">
+      <div class="bench-compare-pickers">
+        <div class="bench-ctl">
+          <label>Run A</label>
+          <select id="bench-cmp-a"></select>
+        </div>
+        <div class="bench-ctl">
+          <label>Run B</label>
+          <select id="bench-cmp-b"></select>
+        </div>
+        <div class="bench-ctl">
+          <label>&nbsp;</label>
+          <button class="bench-run-btn" onclick="renderBenchCompare()">◈ Compare</button>
+        </div>
+      </div>
+      <div id="bench-compare-view"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────
 let sessionId = null;
@@ -1144,6 +1865,14 @@ let currentModel = '';
 let pendingModel = '';  // model selected before first message
 let activeProjectId = localStorage.getItem('activeProjectId') || null;
 let _projects = [];
+window._reviewMode = false;
+
+function toggleReviewMode() {
+  window._reviewMode = !window._reviewMode;
+  const btn = document.getElementById('review-toggle');
+  btn.classList.toggle('active', window._reviewMode);
+  btn.title = window._reviewMode ? 'Review mode ON (solver + reviewer)' : 'Dual-agent review mode: solver + reviewer';
+}
 
 // ── DOM refs ──────────────────────────────────────────────────
 const messages  = document.getElementById('messages');
@@ -1204,6 +1933,17 @@ function addBubble(role) {
   bubble.className = 'bubble';
   if (role === 'agent') bubble.classList.add('cursor');
     if (role === 'agent') {
+      // Separate div for status rows (thinking, tools, reasoning) — never replaced by innerHTML
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'bubble-status';
+      bubble.appendChild(statusDiv);
+      bubble._statusDiv = statusDiv;
+      // Separate div for rendered markdown content
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'bubble-content';
+      bubble.appendChild(contentDiv);
+      bubble._contentDiv = contentDiv;
+
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn';
       copyBtn.textContent = 'Copy';
@@ -1229,19 +1969,22 @@ function addToolRow(bubble, name, preview, done = false) {
   const row = document.createElement('div');
   row.className = 'tool-row' + (done ? ' done' : '');
   row.innerHTML = `<span class="dot"></span><span class="tool-name">${esc(name)}</span>${preview ? ` <span style="opacity:.6">${esc(preview.slice(0, 80))}</span>` : ''}`;
-  bubble.appendChild(row);
+  (bubble._statusDiv || bubble).appendChild(row);
   scrollBottom();
   return row;
 }
 
 // ── Minimal markdown → HTML (code blocks + inline code) ───────────────
+// XSS-safe: all raw text is HTML-escaped BEFORE any markdown replacement,
+// so `<img onerror=...>` or similar from model output becomes inert text.
 function renderMd(text) {
-  // Fenced code blocks
+  text = escHtml(String(text == null ? '' : text));
+  // Fenced code blocks (content is already escaped above)
   text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-    `<pre><code>${escHtml(code.trimEnd())}</code></pre>`
+    `<pre><code>${code.replace(/\s+$/, '')}</code></pre>`
   );
   // Inline code
-  text = text.replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`);
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
   // Bold
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   return text;
@@ -1254,6 +1997,33 @@ function esc(s) { return escHtml(String(s)); }
 
 function scrollBottom() {
   messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Context window bar ───────────────────────────────────────────────
+function updateContextBar(data) {
+  const bar = document.getElementById('context-bar');
+  const label = document.getElementById('ctx-label');
+  const fill = document.getElementById('ctx-fill');
+  if (!data || !data.context_length) return;
+  const used = data.tokens_used || 0;
+  const total = data.context_length;
+  const pct = Math.min(100, Math.round((used / total) * 100));
+  const usedK = used >= 1000 ? (used / 1000).toFixed(1) + 'k' : used;
+  const totalK = total >= 1000 ? (total / 1000).toFixed(0) + 'k' : total;
+  label.textContent = `Context: ${usedK} / ${totalK} tokens (${pct}%)`;
+  fill.style.width = pct + '%';
+  fill.className = 'ctx-meter-fill' + (pct > 80 ? ' danger' : pct > 60 ? ' warn' : '');
+  bar.classList.add('visible');
+}
+
+// ── Connection status ─────────────────────────────────────────────────
+function setConnStatus(state, text) {
+  // state: 'idle' | 'connecting' | 'connected' | 'error'
+  const el = document.getElementById('conn-status');
+  const txt = document.getElementById('conn-text');
+  if (!el || !txt) return;
+  el.className = state;
+  txt.textContent = text || state;
 }
 
 // ── Send ──────────────────────────────────────────────────────────────
@@ -1280,6 +2050,7 @@ async function send() {
   let thinkingTimer = null;
 
   setStatus('Thinking…');
+  setConnStatus('connecting', 'Connecting…');
 
   try {
     const resp = await fetch('/api/chat', {
@@ -1288,7 +2059,8 @@ async function send() {
       body: JSON.stringify(Object.assign(
         { message: text, session_id: sessionId },
         pendingModel ? { model: pendingModel, provider: window._pendingProvider || '', base_url: window._pendingBaseUrl || '', api_key: window._pendingApiKey || '' } : {},
-        activeProjectId ? { project_id: activeProjectId } : {}
+        activeProjectId ? { project_id: activeProjectId } : {},
+        window._reviewMode ? { review_mode: true } : {}
       )),
     });
 
@@ -1332,7 +2104,8 @@ async function send() {
             ctxNote.className = 'thinking-row';
             ctxNote.style.fontSize = '0.72rem';
             ctxNote.innerHTML = `<span class="pulse" style="background:var(--tool-text)"></span>📂 Injected ~${data.tokens.toLocaleString()} tokens of project context`;
-            agentBubble.appendChild(ctxNote);
+            const sd = agentBubble._statusDiv || agentBubble;
+            sd.appendChild(ctxNote);
             // Auto-remove after response starts
             agentBubble._ctxNote = ctxNote;
           }
@@ -1344,7 +2117,7 @@ async function send() {
               thinkingRow = document.createElement('div');
               thinkingRow.className = 'thinking-row';
               thinkingRow.innerHTML = '<span class="pulse"></span><span class="thinking-text"></span><span class="thinking-elapsed"></span>';
-              agentBubble.appendChild(thinkingRow);
+              (agentBubble._statusDiv || agentBubble).appendChild(thinkingRow);
               scrollBottom();
               thinkingStart = Date.now();
               thinkingTimer = setInterval(() => {
@@ -1358,38 +2131,57 @@ async function send() {
             thinkingRow.querySelector('.thinking-text').textContent = data.text;
             setStatus(data.text);
           } else if (thinkingRow) {
+            // Keep the thinking row visible but dimmed
             if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
-            thinkingRow.remove();
+            thinkingRow.classList.add('persistent');
             thinkingRow = null;
           }
 
         } else if (event === 'reasoning') {
           // Model reasoning/thinking tokens
           if (!reasoningBlock) {
+            const sd = agentBubble._statusDiv || agentBubble;
             const hdr = document.createElement('div');
             hdr.className = 'reasoning-header';
             hdr.textContent = '💭 Reasoning';
-            agentBubble.appendChild(hdr);
+            sd.appendChild(hdr);
             reasoningBlock = document.createElement('div');
             reasoningBlock.className = 'reasoning-block';
-            agentBubble.appendChild(reasoningBlock);
+            sd.appendChild(reasoningBlock);
           }
           reasoningBlock.textContent += data.text;
           reasoningBlock.scrollTop = reasoningBlock.scrollHeight;
           scrollBottom();
+
+        } else if (event === 'agent_status') {
+          // Agent lifecycle status (retries, timeouts, reconnections)
+          if (data.text) {
+            const row = document.createElement('div');
+            const isErr = /error|failed|exceeded/i.test(data.text);
+            const isRetry = /retry|retrying|reconnect/i.test(data.text);
+            row.className = 'status-row' + (isErr ? ' error' : '');
+            row.innerHTML = `<span class="status-icon">${isErr ? '❌' : '⚠️'}</span><span>${esc(data.text)}</span>`;
+            (agentBubble._statusDiv || agentBubble).appendChild(row);
+            setStatus(data.text);
+            scrollBottom();
+            if (isRetry) setConnStatus('connecting', 'Reconnecting…');
+            if (isErr) setConnStatus('error', 'Error');
+          }
 
         } else if (event === 'tool_gen') {
           // Model is generating tool call arguments
           setStatus(`⚙ Generating ${data.name}…`);
 
         } else if (event === 'delta') {
-          // Clear thinking row when actual content arrives
+          setConnStatus('connected', 'Connected');
+          // Finalize thinking row (keep visible but dim)
           if (thinkingRow) {
             if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
-            thinkingRow.remove(); thinkingRow = null;
+            thinkingRow.classList.add('persistent');
+            thinkingRow = null;
           }
           if (agentBubble._ctxNote) { agentBubble._ctxNote.remove(); agentBubble._ctxNote = null; }
-          // Collapse reasoning block when response text starts
+          // Collapse reasoning block (click to expand) but keep visible
           if (reasoningBlock && !reasoningBlock.classList.contains('collapsed')) {
             reasoningBlock.classList.add('collapsed');
             reasoningBlock.addEventListener('click', function() {
@@ -1398,7 +2190,9 @@ async function send() {
           }
           rawText += data.text;
           agentBubble._rawText = rawText;
-          agentBubble.innerHTML = renderMd(rawText);
+          // Write to content div only — status rows in _statusDiv are preserved
+          const cd = agentBubble._contentDiv || agentBubble;
+          cd.innerHTML = renderMd(rawText);
           agentBubble.classList.add('cursor');
           scrollBottom();
 
@@ -1416,20 +2210,67 @@ async function send() {
             if (dot) dot.style.background = 'var(--text-dim)';
           }
 
+        } else if (event === 'review_phase') {
+          // Show review phase indicator
+          const phaseRow = document.createElement('div');
+          phaseRow.className = 'thinking-row review-phase';
+          phaseRow.innerHTML = `<span class="pulse" style="background:#a78bfa"></span>${data.label}`;
+          if (data.preview) {
+            const prev = document.createElement('div');
+            prev.className = 'reasoning-block collapsed';
+            prev.style.maxHeight = '80px';
+            prev.style.marginTop = '4px';
+            prev.textContent = data.preview + '…';
+            prev.addEventListener('click', function() { this.classList.toggle('collapsed'); });
+            phaseRow.appendChild(prev);
+          }
+          (agentBubble._statusDiv || agentBubble).appendChild(phaseRow);
+          setStatus(data.label);
+          scrollBottom();
+
+        } else if (event === 'review_verdict') {
+          const verdictRow = document.createElement('div');
+          verdictRow.className = 'thinking-row review-verdict';
+          const icon = data.verdict === 'pass' ? '✅' : '🔄';
+          verdictRow.innerHTML = `<span class="pulse" style="background:${data.verdict === 'pass' ? '#4ade80' : '#fbbf24'}"></span>${icon} Round ${data.round}: ${data.verdict === 'pass' ? 'Approved' : 'Needs revision'}`;
+          if (data.feedback) {
+            const fb = document.createElement('div');
+            fb.className = 'reasoning-block collapsed';
+            fb.style.marginTop = '4px';
+            fb.textContent = data.feedback;
+            fb.addEventListener('click', function() { this.classList.toggle('collapsed'); });
+            verdictRow.appendChild(fb);
+          }
+          (agentBubble._statusDiv || agentBubble).appendChild(verdictRow);
+          scrollBottom();
+
         } else if (event === 'error') {
           const errMsg = data.message || data.error || 'Unknown error';
           const errSpan = document.createElement('span');
           errSpan.className = 'error-text';
           errSpan.textContent = 'Error: ' + errMsg;
-          agentBubble.appendChild(document.createTextNode('\n'));
-          agentBubble.appendChild(errSpan);
+          const cd = agentBubble._contentDiv || agentBubble;
+          cd.appendChild(document.createTextNode('\n'));
+          cd.appendChild(errSpan);
           agentBubble._rawText = (agentBubble._rawText || '') + '\nError: ' + errMsg;
           agentBubble.classList.remove('cursor');
 
+        } else if (event === 'usage') {
+          // Update context window bar
+          updateContextBar(data);
+
         } else if (event === 'done') {
           agentBubble.classList.remove('cursor');
-          if (!rawText) agentBubble.textContent = '(no response)';
+          if (!rawText) { const cd = agentBubble._contentDiv || agentBubble; cd.textContent = '(no response)'; }
           setStatus('');
+          setConnStatus('connected', 'Connected');
+          maybeShowSelfSuggest(rawText);
+          // Finalize any remaining thinking row
+          if (thinkingRow) {
+            if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+            thinkingRow.classList.add('persistent');
+            thinkingRow = null;
+          }
         }
       }
     }
@@ -1442,6 +2283,7 @@ async function send() {
     agentBubble.appendChild(errSpan);
     agentBubble._rawText = 'Connection error: ' + err.message;
     setStatus('');
+    setConnStatus('error', 'Disconnected');
   }
 
   busy = false;
@@ -1939,47 +2781,96 @@ async function maybePullModel(modelId) {
   );
   if (!isLib) return true;
 
-  addSystemNote(`\u23ec Pulling ${modelId}\u2026`);
+  // Create a live progress bar in the chat
+  const progBox = document.createElement('div');
+  progBox.className = 'pull-progress';
+  progBox.innerHTML = `
+    <div class="pp-head">
+      <span>⬇ Pulling ${modelId}</span>
+      <span class="pp-status">initialising…</span>
+    </div>
+    <div class="pp-bar-wrap"><div class="pp-bar"></div></div>
+    <div class="pp-meta"></div>
+  `;
+  messages.appendChild(progBox);
+  scrollBottom();
+  const ppStatus = progBox.querySelector('.pp-status');
+  const ppBar = progBox.querySelector('.pp-bar');
+  const ppMeta = progBox.querySelector('.pp-meta');
 
-  if (_activeTab === 'remote' && _remoteHost) {
-    try {
-      const resp = await fetch('/api/remote-ollama/pull', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({host: _remoteHost, token: _remoteToken, name: modelId}),
-      });
-      const data = await resp.json();
-      if (data.ok) {
-        addSystemNote(`\u2705 ${modelId} pulled on remote`);
-        _remoteLoaded = false;
-        return true;
-      } else {
-        addSystemNote(`\u274c Pull failed: ${data.error || 'unknown'}`, true);
-        return false;
-      }
-    } catch (err) {
-      addSystemNote(`\u274c Pull error: ${err.message}`, true);
-      return false;
-    }
-  }
+  const streamUrl = _activeTab === 'remote' && _remoteHost
+    ? '/api/remote-ollama/pull/stream'
+    : '/api/ollama/pull/stream';
+  const body = _activeTab === 'remote' && _remoteHost
+    ? { host: _remoteHost, token: _remoteToken, name: modelId }
+    : { name: modelId };
+
+  const fmtBytes = (n) => {
+    if (!n) return '';
+    const units = ['B','KB','MB','GB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(n < 10 ? 2 : 1)} ${units[i]}`;
+  };
 
   try {
-    const resp = await fetch('/api/ollama/pull', {
+    const resp = await fetch(streamUrl, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: modelId}),
+      body: JSON.stringify(body),
     });
-    const data = await resp.json();
-    if (data.ok) {
-      addSystemNote(`\u2705 ${modelId} pulled successfully`);
-      _mpLoaded = false;
-      return true;
-    } else {
-      addSystemNote(`\u274c Pull failed: ${data.error || 'unknown'}`, true);
+    if (!resp.ok) {
+      progBox.classList.add('error');
+      progBox.querySelector('.pp-status').textContent =
+        `Pull failed: HTTP ${resp.status}`;
       return false;
     }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let ok = false;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.trim() || part.startsWith(':')) continue;
+        const em = part.match(/^event: (\w+)/m);
+        const dm = part.match(/^data: (.+)/ms);
+        if (!em || !dm) continue;
+        let d; try { d = JSON.parse(dm[1]); } catch { continue; }
+        if (em[1] === 'progress') {
+          const status = d.status || '';
+          ppStatus.textContent = status;
+          if (d.total && d.completed != null) {
+            const pct = Math.min(100, (d.completed / d.total) * 100);
+            ppBar.style.width = pct.toFixed(1) + '%';
+            ppMeta.textContent = `${fmtBytes(d.completed)} / ${fmtBytes(d.total)}  ·  ${pct.toFixed(1)}%`;
+          }
+        } else if (em[1] === 'done') {
+          ok = true;
+          progBox.classList.add('done');
+          ppBar.style.width = '100%';
+          ppStatus.textContent = 'complete';
+          ppMeta.textContent = '✓ ready';
+        } else if (em[1] === 'error') {
+          progBox.classList.add('error');
+          ppStatus.textContent = d.message || 'error';
+        }
+      }
+    }
+    if (ok) {
+      if (_activeTab === 'remote') _remoteLoaded = false; else _mpLoaded = false;
+      // Auto-fade the progress box after a short delay
+      setTimeout(() => { progBox.style.transition = 'opacity .6s'; progBox.style.opacity = '0.5'; }, 1500);
+      return true;
+    }
+    return false;
   } catch (err) {
-    addSystemNote(`\u274c Pull error: ${err.message}`, true);
+    progBox.classList.add('error');
+    progBox.querySelector('.pp-status').textContent = err.message;
     return false;
   }
 }
@@ -2086,6 +2977,905 @@ function addSystemNote(text, isError = false) {
 
 function setStatus(msg) {
   statusEl.textContent = msg;
+}
+
+// ── Self-suggest: detect "I can't browse" and offer one-click fix ───
+const _SUGGEST_PATTERNS = [
+  /can(?:'|no)t\s+(?:browse|access)\s+(?:the\s+)?(?:live\s+)?(?:internet|web|real[\s-]?time)/i,
+  /(?:don'?t|do\s+not)\s+have\s+(?:the\s+)?(?:ability|access)\s+to\s+(?:browse|access|search)/i,
+  /(?:unable|not\s+able)\s+to\s+(?:browse|access|search)\s+(?:the\s+)?(?:web|internet)/i,
+  /i\s+am\s+an\s+ai\s+(?:and|but)\s+(?:i\s+)?(?:can(?:'|no)t|cannot)\s+(?:browse|access)/i,
+  /no\s+(?:live|real[\s-]?time|current)\s+(?:internet|web)\s+access/i,
+];
+let _suggestDismissed = false;
+
+function maybeShowSelfSuggest(text) {
+  if (!text || _suggestDismissed) return;
+  if (document.querySelector('.suggest-toast')) return;
+  const matched = _SUGGEST_PATTERNS.some(re => re.test(text));
+  if (!matched) return;
+  showSelfSuggestToast();
+}
+
+function showSelfSuggestToast() {
+  const existing = document.querySelector('.suggest-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'suggest-toast';
+  toast.innerHTML = `
+    <div class="suggest-title">🤖 AGENT LIMITATION DETECTED</div>
+    <div class="suggest-body">
+      Your model said it can't browse the web. Install the
+      <b style="color:var(--accent)">DuckDuckGo MCP server</b> for free, zero-API-key web search.
+    </div>
+    <div class="suggest-actions">
+      <button class="ext-btn" onclick="dismissSelfSuggest(true)">Dismiss</button>
+      <button class="ext-btn" onclick="installSuggestedMcp()" style="background:rgba(56,208,255,0.1)">+ Install</button>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) dismissSelfSuggest(false);
+  }, 25000);
+}
+
+function dismissSelfSuggest(permanent) {
+  const toast = document.querySelector('.suggest-toast');
+  if (!toast) return;
+  toast.classList.add('closing');
+  setTimeout(() => toast.remove(), 250);
+  if (permanent) _suggestDismissed = true;
+}
+
+async function installSuggestedMcp() {
+  const toast = document.querySelector('.suggest-toast');
+  if (toast) {
+    toast.querySelector('.suggest-body').innerHTML =
+      '<span style="color:var(--accent)">◈ Installing DuckDuckGo MCP…</span>';
+    toast.querySelector('.suggest-actions').innerHTML = '';
+  }
+  try {
+    const resp = await fetch('/api/mcp/curated');
+    const data = await resp.json();
+    const ddg = (data.servers || []).find(s => s.name === 'duckduckgo') || (data.servers || [])[0];
+    if (!ddg) throw new Error('DuckDuckGo MCP not found in curated list');
+    const body = Object.assign({ name: ddg.name }, ddg.config || {});
+    const postResp = await fetch('/api/mcp/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const postData = await postResp.json();
+    if (!postResp.ok || postData.error) throw new Error(postData.detail || postData.error || 'Install failed');
+    if (toast) {
+      toast.querySelector('.suggest-body').innerHTML =
+        '<span style="color:var(--ok)">✓ Installed! Try your question again.</span>';
+      setTimeout(() => dismissSelfSuggest(true), 3500);
+    }
+  } catch (err) {
+    if (toast) {
+      toast.querySelector('.suggest-body').innerHTML =
+        `<span style="color:var(--error)">⚠ ${err.message}</span>`;
+      toast.querySelector('.suggest-actions').innerHTML =
+        '<button class="ext-btn" onclick="dismissSelfSuggest(true)">Close</button>';
+    }
+  }
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+let _dashActiveTab = 'overview';
+
+async function openDashboard() {
+  const modal = document.getElementById('dashboard-modal');
+  modal.classList.add('open');
+  switchDashTab('overview');
+}
+
+function closeDashboard() {
+  document.getElementById('dashboard-modal').classList.remove('open');
+}
+
+function switchDashTab(tab) {
+  _dashActiveTab = tab;
+  ['overview','mcp','skills','tools'].forEach(t => {
+    const btn = document.getElementById('dash-tab-' + t);
+    const pane = document.getElementById('dash-pane-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'overview') loadDashOverview();
+  else if (tab === 'mcp') loadDashMcp();
+  else if (tab === 'skills') loadDashSkills();
+  else if (tab === 'tools') loadDashTools();
+}
+
+async function loadDashOverview() {
+  const grid = document.getElementById('dash-grid');
+  grid.innerHTML = '<div class="dash-loading">◈ Initialising telemetry…</div>';
+  try {
+    const resp = await fetch('/api/dashboard');
+    const d = await resp.json();
+    grid.innerHTML = _renderDashboard(d);
+  } catch (err) {
+    grid.innerHTML = `<div class="dash-loading" style="color:var(--error)">⚠ ${err.message}</div>`;
+  }
+}
+
+// ── MCP Tab ─────────────────────────────────────────────────────────
+async function loadDashMcp() {
+  const pane = document.getElementById('dash-pane-mcp');
+  pane.innerHTML = '<div class="dash-loading">◈ Loading MCP servers…</div>';
+  try {
+    const [installedRes, curatedRes] = await Promise.all([
+      fetch('/api/mcp/servers'),
+      fetch('/api/mcp/curated'),
+    ]);
+    const installed = await installedRes.json();
+    const curated = await curatedRes.json();
+    pane.innerHTML = _renderMcpTab(installed, curated);
+  } catch (err) {
+    pane.innerHTML = `<div class="dash-loading" style="color:var(--error)">⚠ ${err.message}</div>`;
+  }
+}
+
+function _renderMcpTab(installed, curated) {
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const servers = installed.servers || [];
+  const installedNames = new Set(servers.map(s => s.name));
+
+  const installedHtml = servers.length ? servers.map(s => {
+    const statusBadge = s.connected
+      ? `<span class="ext-badge ok">● ${s.tool_count || 0} tools</span>`
+      : s.error
+        ? `<span class="ext-badge err" title="${esc(s.error)}">● error</span>`
+        : `<span class="ext-badge dim">● offline</span>`;
+    const cmd = s.config && s.config.command
+      ? `${esc(s.config.command)} ${esc((s.config.args || []).join(' '))}`
+      : '';
+    return `
+      <div class="ext-card">
+        <div class="ext-card-body">
+          <div class="ext-card-name">${esc(s.name)} ${statusBadge}</div>
+          ${cmd ? `<div class="ext-card-desc"><code>${cmd}</code></div>` : ''}
+        </div>
+        <button class="ext-btn danger" onclick="mcpRemove('${esc(s.name)}')">✕ Remove</button>
+      </div>`;
+  }).join('') : '<div class="ext-empty">No MCP servers configured yet. Install a curated one below ↓</div>';
+
+  const curatedHtml = (curated.servers || []).map(c => {
+    const isInstalled = installedNames.has(c.name);
+    const tags = (c.tags || []).map(t => `<span class="ext-tag">${esc(t)}</span>`).join('');
+    return `
+      <div class="ext-card">
+        <div class="ext-card-body">
+          <div class="ext-card-name">${esc(c.name)}</div>
+          <div class="ext-card-desc">${esc(c.description)}</div>
+          ${c.why ? `<div class="ext-card-desc" style="color:var(--accent-dim);margin-top:4px">→ ${esc(c.why)}</div>` : ''}
+          ${tags ? `<div class="ext-card-tags">${tags}</div>` : ''}
+        </div>
+        <button class="ext-btn" ${isInstalled ? 'disabled' : ''} onclick="mcpInstallCurated('${esc(c.name)}')">
+          ${isInstalled ? '✓ Installed' : '+ Install'}
+        </button>
+      </div>`;
+  }).join('') || '<div class="ext-empty">No curated servers available.</div>';
+
+  return `
+    <div class="ext-section">
+      <h4 class="ext-section-title">◈ Installed (${servers.length})</h4>
+      ${installedHtml}
+    </div>
+    <div class="ext-section">
+      <h4 class="ext-section-title">✦ Curated — one-click install (zero API key)</h4>
+      ${curatedHtml}
+    </div>
+    <div class="ext-section">
+      <h4 class="ext-section-title">⚙ Add Custom Server</h4>
+      <div class="ext-card" style="flex-direction:column;gap:8px;align-items:stretch">
+        <input class="ext-input" id="mcp-custom-name" placeholder="Server name (e.g. my-server)" />
+        <input class="ext-input" id="mcp-custom-command" placeholder="Command (e.g. npx, uvx, python)" />
+        <input class="ext-input" id="mcp-custom-args" placeholder="Args space-separated (e.g. -y @modelcontextprotocol/server-foo)" />
+        <button class="ext-btn" onclick="mcpAddCustom()" style="align-self:flex-end">+ Add Server</button>
+      </div>
+    </div>
+  `;
+}
+
+async function mcpInstallCurated(name) {
+  try {
+    const resp = await fetch('/api/mcp/curated');
+    const data = await resp.json();
+    const c = (data.servers || []).find(s => s.name === name);
+    if (!c) throw new Error('Curated server not found');
+    await _mcpPost(name, c.config);
+  } catch (err) {
+    alert('Install failed: ' + err.message);
+  }
+}
+
+async function mcpAddCustom() {
+  const name = document.getElementById('mcp-custom-name').value.trim();
+  const command = document.getElementById('mcp-custom-command').value.trim();
+  const argsRaw = document.getElementById('mcp-custom-args').value.trim();
+  if (!name || !command) {
+    alert('Name and command are required.');
+    return;
+  }
+  const args = argsRaw ? argsRaw.split(/\s+/) : [];
+  await _mcpPost(name, { command, args });
+}
+
+async function _mcpPost(name, config) {
+  try {
+    // Backend expects flat {name, command, args, url, headers, env, timeout, enabled}
+    const body = Object.assign({ name }, config || {});
+    const resp = await fetch('/api/mcp/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.detail || data.error || 'Install failed');
+    await loadDashMcp();
+  } catch (err) {
+    alert('Install failed: ' + err.message);
+  }
+}
+
+async function mcpRemove(name) {
+  if (!confirm(`Remove MCP server "${name}"?`)) return;
+  try {
+    const resp = await fetch('/api/mcp/servers/' + encodeURIComponent(name), { method: 'DELETE' });
+    if (!resp.ok) {
+      const d = await resp.json().catch(() => ({}));
+      throw new Error(d.detail || 'Remove failed');
+    }
+    await loadDashMcp();
+  } catch (err) {
+    alert('Remove failed: ' + err.message);
+  }
+}
+
+// ── Skills Tab ──────────────────────────────────────────────────────
+let _skillsSearchTimer = null;
+
+async function loadDashSkills() {
+  const pane = document.getElementById('dash-pane-skills');
+  pane.innerHTML = '<div class="dash-loading">◈ Loading skills…</div>';
+  try {
+    const resp = await fetch('/api/skills');
+    const data = await resp.json();
+    pane.innerHTML = _renderSkillsTab(data);
+    const input = document.getElementById('skills-search-input');
+    if (input) {
+      input.addEventListener('input', (e) => {
+        clearTimeout(_skillsSearchTimer);
+        _skillsSearchTimer = setTimeout(() => doSkillsSearch(e.target.value), 300);
+      });
+    }
+  } catch (err) {
+    pane.innerHTML = `<div class="dash-loading" style="color:var(--error)">⚠ ${err.message}</div>`;
+  }
+}
+
+function _renderSkillsTab(data) {
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const skills = data.skills || [];
+  const installedHtml = skills.length ? skills.map(s => {
+    const tags = (s.tags || []).slice(0, 4).map(t => `<span class="ext-tag">${esc(t)}</span>`).join('');
+    return `
+      <div class="ext-card">
+        <div class="ext-card-body">
+          <div class="ext-card-name">${esc(s.name)}</div>
+          ${s.description ? `<div class="ext-card-desc">${esc(s.description)}</div>` : ''}
+          ${tags ? `<div class="ext-card-tags">${tags}</div>` : ''}
+        </div>
+        <button class="ext-btn danger" onclick="skillRemove('${esc(s.name)}')">✕ Remove</button>
+      </div>`;
+  }).join('') : '<div class="ext-empty">No skills installed. Search the hub below ↓</div>';
+
+  return `
+    <div class="ext-section">
+      <h4 class="ext-section-title">◈ Installed (${skills.length})</h4>
+      ${installedHtml}
+    </div>
+    <div class="ext-section">
+      <h4 class="ext-section-title">✦ Search Skills Hub</h4>
+      <input class="ext-input" id="skills-search-input" placeholder="Search skills (e.g. git, code-review, debugging)…" autocomplete="off" />
+      <div id="skills-search-results" style="margin-top:10px"></div>
+    </div>
+  `;
+}
+
+async function doSkillsSearch(q) {
+  const container = document.getElementById('skills-search-results');
+  if (!container) return;
+  if (!q || q.length < 2) {
+    container.innerHTML = '<div class="ext-empty">Type at least 2 characters…</div>';
+    return;
+  }
+  container.innerHTML = '<div class="dash-loading">Searching…</div>';
+  try {
+    const resp = await fetch('/api/skills/search?q=' + encodeURIComponent(q));
+    const data = await resp.json();
+    const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const results = data.results || [];
+    if (!results.length) {
+      container.innerHTML = '<div class="ext-empty">No matches found.</div>';
+      return;
+    }
+    container.innerHTML = results.slice(0, 30).map(r => {
+      const tags = (r.tags || []).slice(0, 4).map(t => `<span class="ext-tag">${esc(t)}</span>`).join('');
+      const installed = r.installed;
+      return `
+        <div class="ext-card">
+          <div class="ext-card-body">
+            <div class="ext-card-name">
+              ${esc(r.name)}
+              ${r.source ? `<span class="ext-badge dim">${esc(r.source)}</span>` : ''}
+            </div>
+            ${r.description ? `<div class="ext-card-desc">${esc(r.description)}</div>` : ''}
+            ${tags ? `<div class="ext-card-tags">${tags}</div>` : ''}
+          </div>
+          <button class="ext-btn" ${installed ? 'disabled' : ''} onclick="skillInstall('${esc(r.identifier || r.name)}')">
+            ${installed ? '✓ Installed' : '+ Install'}
+          </button>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="dash-loading" style="color:var(--error)">⚠ ${err.message}</div>`;
+  }
+}
+
+async function skillInstall(identifier) {
+  try {
+    const resp = await fetch('/api/skills/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || data.error || 'Install failed');
+    await loadDashSkills();
+  } catch (err) {
+    alert('Install failed: ' + err.message);
+  }
+}
+
+async function skillRemove(name) {
+  if (!confirm(`Remove skill "${name}"?`)) return;
+  try {
+    const resp = await fetch('/api/skills/' + encodeURIComponent(name), { method: 'DELETE' });
+    if (!resp.ok) {
+      const d = await resp.json().catch(() => ({}));
+      throw new Error(d.detail || 'Remove failed');
+    }
+    await loadDashSkills();
+  } catch (err) {
+    alert('Remove failed: ' + err.message);
+  }
+}
+
+// ── Tools Tab ───────────────────────────────────────────────────────
+async function loadDashTools() {
+  const pane = document.getElementById('dash-pane-tools');
+  pane.innerHTML = '<div class="dash-loading">◈ Loading tools status…</div>';
+  try {
+    const resp = await fetch('/api/tools/status');
+    const data = await resp.json();
+    pane.innerHTML = _renderToolsTab(data);
+  } catch (err) {
+    pane.innerHTML = `<div class="dash-loading" style="color:var(--error)">⚠ ${err.message}</div>`;
+  }
+}
+
+function _renderToolsTab(data) {
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const tools = data.tools || [];
+  const summary = Array.isArray(data.summary) ? data.summary : [];
+  const total = data.total != null ? data.total : tools.length;
+  const available = data.available != null ? data.available : tools.filter(t => t.available).length;
+
+  // Map toolset -> its tools
+  const toolsByToolset = {};
+  tools.forEach(t => {
+    const ts = t.toolset || t.category || 'other';
+    (toolsByToolset[ts] = toolsByToolset[ts] || []).push(t);
+  });
+
+  // Render one section per category from summary (preserves order + labels)
+  const sections = summary.map(cat => {
+    const group = toolsByToolset[cat.key] || [];
+    const headerBadge = cat.ready
+      ? `<span class="ext-badge ok">● ${cat.available}/${cat.total} ready</span>`
+      : `<span class="ext-badge warn">● ${cat.available}/${cat.total} — needs env</span>`;
+    const missingEnv = (cat.missing_env || []).map(e =>
+      `<span class="ext-tag" style="color:var(--error);border-color:rgba(255,100,100,0.3)">${esc(e)}</span>`
+    ).join('');
+    const cards = group.map(t => {
+      const badge = t.available
+        ? '<span class="ext-badge ok">● ready</span>'
+        : '<span class="ext-badge warn">● missing env</span>';
+      const missing = (t.missing_env || []).map(e =>
+        `<span class="ext-tag" style="color:var(--error);border-color:rgba(255,100,100,0.3)">${esc(e)}</span>`
+      ).join('');
+      return `
+        <div class="ext-card">
+          <div class="ext-card-body">
+            <div class="ext-card-name">${esc(t.name)} ${badge}</div>
+            ${missing ? `<div class="ext-card-tags">Needs: ${missing}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('') || '<div class="ext-empty">No tools in this category.</div>';
+    return `
+      <div class="ext-section">
+        <h4 class="ext-section-title">${esc(cat.label || cat.key)} ${headerBadge}</h4>
+        ${missingEnv ? `<div class="ext-card" style="background:rgba(255,170,60,0.05);border-left-color:#ffaa3c"><div class="ext-card-body"><div class="ext-card-desc">Set these env vars in <code>~/.hermes/.env</code> to enable: ${missingEnv}</div></div></div>` : ''}
+        ${cards}
+      </div>`;
+  }).join('');
+
+  const summaryBar = `
+    <div class="ext-card" style="background:rgba(56,208,255,0.05);border-left-color:var(--accent)">
+      <div class="ext-card-body">
+        <div class="ext-card-name">◈ ${available}/${total} tools ready</div>
+        <div class="ext-card-desc">
+          Categories needing configuration will show which env vars to set.
+        </div>
+      </div>
+    </div>`;
+
+  return summaryBar + sections;
+}
+
+function _renderDashboard(d) {
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const skills = d.skills || [];
+  const memories = d.memories || [];
+  const tools = d.tools || [];
+  const sessions = d.sessions || {count: 0, recent: []};
+  const webSessions = d.web_sessions || [];
+  const projects = d.projects || [];
+
+  const fmtTime = (ts) => {
+    if (!ts) return '';
+    const diff = Date.now()/1000 - ts;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  };
+
+  const skillsList = skills.slice(0, 20).map(s =>
+    `<div class="dash-list-item">${esc(s.name)}${s.description ? `<span class="di-sub">${esc(s.description)}</span>` : ''}</div>`
+  ).join('') || '<div class="dash-list-item" style="border-left-color:var(--text-dim);color:var(--text-dim)">No skills installed</div>';
+
+  const memoryList = memories.slice(0, 15).map(m =>
+    `<div class="dash-list-item">${esc(m.name)}${m.preview ? `<span class="di-sub">${esc(m.preview)}</span>` : ''}</div>`
+  ).join('') || '<div class="dash-list-item" style="border-left-color:var(--text-dim);color:var(--text-dim)">No memories stored</div>';
+
+  const sessionList = sessions.recent.slice(0, 8).map(s =>
+    `<div class="dash-list-item">${esc(s.name)}<span class="di-sub">${fmtTime(s.mtime)}</span></div>`
+  ).join('') || '<div class="dash-list-item" style="color:var(--text-dim)">No sessions yet</div>';
+
+  const toolsList = tools.slice(0, 30).map(t =>
+    `<span style="display:inline-block;padding:3px 8px;margin:2px;font-size:0.7rem;background:rgba(56,208,255,0.08);border:1px solid var(--border);border-radius:3px;color:var(--accent);font-family:var(--font-mono)">${esc(t.name)}</span>`
+  ).join('') || '<span style="color:var(--text-dim);font-size:0.75rem">No tools registered</span>';
+
+  const projectList = projects.slice(0, 8).map(p =>
+    `<div class="dash-list-item">${esc(p.name)}<span class="di-sub">${p.docs || 0} docs · ~${(p.tokens || 0).toLocaleString()} tokens</span></div>`
+  ).join('') || '<div class="dash-list-item" style="color:var(--text-dim)">No projects</div>';
+
+  const activeSessions = webSessions.map(s =>
+    `<div class="dash-list-item">${esc(s.id.slice(0,12))}…<span class="di-sub">${esc(s.model)} · ${s.turns} turns</span></div>`
+  ).join('') || '<div class="dash-list-item" style="color:var(--text-dim)">No active sessions</div>';
+
+  return `
+    <div class="dash-card">
+      <h4>⚙ Skills</h4>
+      <div class="dash-metric">${skills.length}<span class="dash-unit">loaded</span></div>
+      <div class="dash-list">${skillsList}</div>
+    </div>
+
+    <div class="dash-card">
+      <h4>🧠 Memory</h4>
+      <div class="dash-metric">${memories.length}<span class="dash-unit">entries</span></div>
+      <div class="dash-list">${memoryList}</div>
+    </div>
+
+    <div class="dash-card">
+      <h4>📡 Sessions</h4>
+      <div class="dash-metric">${sessions.count}<span class="dash-unit">total</span></div>
+      <div class="dash-sub">Recent activity</div>
+      <div class="dash-list">${sessionList}</div>
+    </div>
+
+    <div class="dash-card">
+      <h4>📚 Projects</h4>
+      <div class="dash-metric">${projects.length}<span class="dash-unit">active</span></div>
+      <div class="dash-list">${projectList}</div>
+    </div>
+
+    <div class="dash-card">
+      <h4>⟡ Live Agents</h4>
+      <div class="dash-metric">${webSessions.length}<span class="dash-unit">online</span></div>
+      <div class="dash-list">${activeSessions}</div>
+    </div>
+
+    <div class="dash-card span-2">
+      <h4>🔧 Tools Registry</h4>
+      <div class="dash-metric">${tools.length}<span class="dash-unit">registered</span></div>
+      <div style="margin-top:8px;max-height:140px;overflow-y:auto">${toolsList}</div>
+    </div>
+
+    <div class="dash-card span-2">
+      <h4>◈ System</h4>
+      <div class="dash-sub">
+        <code style="color:var(--accent);font-size:0.7rem">${esc(d.hermes_home || '')}</code><br>
+        <span style="color:${d.config_present ? 'var(--ok)' : 'var(--error)'}">●</span>
+        Config ${d.config_present ? `present (${d.config_size} bytes)` : 'missing'}
+      </div>
+    </div>
+  `;
+}
+
+// ESC to close dashboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('dashboard-modal');
+    if (m && m.classList.contains('open')) closeDashboard();
+    const b = document.getElementById('bench-modal');
+    if (b && b.classList.contains('open')) closeBench();
+  }
+});
+
+// ── Benchmark Lab ────────────────────────────────────────────────────
+let _benchActiveTab = 'new';
+let _benchCurrentRunId = null;
+let _benchHistoryCache = [];
+
+async function openBench() {
+  const modal = document.getElementById('bench-modal');
+  modal.classList.add('open');
+  switchBenchTab('new');
+  await loadBenchSuites();
+}
+
+function closeBench() {
+  document.getElementById('bench-modal').classList.remove('open');
+}
+
+function switchBenchTab(tab) {
+  _benchActiveTab = tab;
+  ['new','history','compare'].forEach(t => {
+    document.getElementById('bench-tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('bench-pane-' + t).style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'history') loadBenchHistory();
+  if (tab === 'compare') loadBenchCompareOptions();
+}
+
+async function loadBenchSuites() {
+  try {
+    const resp = await fetch('/api/bench/suites');
+    const suites = await resp.json();
+    const sel = document.getElementById('bench-suite');
+    sel.innerHTML = suites.map(s =>
+      `<option value="${s.id}">${esc(s.name)} (${s.task_count} tasks)</option>`
+    ).join('');
+  } catch (e) {
+    console.error('Load suites failed:', e);
+  }
+}
+
+async function startBench() {
+  const suiteId = document.getElementById('bench-suite').value;
+  const pattern = document.getElementById('bench-pattern').value;
+  const model = document.getElementById('bench-model').value.trim() || pendingModel || '';
+  const note = document.getElementById('bench-note').value.trim();
+  if (!suiteId) return alert('Pick a suite');
+
+  const runBtn = document.getElementById('bench-run-btn');
+  runBtn.disabled = true;
+  runBtn.textContent = '⟳ RUNNING…';
+
+  const live = document.getElementById('bench-live');
+  live.style.display = '';
+  const taskList = document.getElementById('bench-task-list');
+  taskList.innerHTML = '';
+  document.getElementById('bench-phase').textContent = 'initialising…';
+  document.getElementById('bench-counts').textContent = '';
+  document.getElementById('bench-bar').style.width = '0%';
+
+  const body = {
+    suite_id: suiteId,
+    pattern,
+    note,
+  };
+  if (model) body.model = model;
+  if (window._pendingProvider) body.provider = window._pendingProvider;
+  if (window._pendingBaseUrl) body.base_url = window._pendingBaseUrl;
+  if (window._pendingApiKey) body.api_key = window._pendingApiKey;
+
+  try {
+    const resp = await fetch('/api/bench/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    const taskItems = {};
+    let passed = 0, failed = 0, totalTasks = 0;
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.trim() || part.startsWith(':')) continue;
+        const em = part.match(/^event: (\w+)/m);
+        const dm = part.match(/^data: (.+)/ms);
+        if (!em || !dm) continue;
+        let d; try { d = JSON.parse(dm[1]); } catch { continue; }
+        const ev = em[1];
+
+        if (ev === 'run_id') {
+          _benchCurrentRunId = d.run_id;
+        } else if (ev === 'run_started') {
+          totalTasks = d.total;
+          document.getElementById('bench-phase').textContent = `${d.pattern} · ${d.model}`;
+          document.getElementById('bench-counts').textContent = `0 / ${d.total}`;
+        } else if (ev === 'task_started') {
+          const item = document.createElement('div');
+          item.className = 'bench-task-item running';
+          item.id = 'bti-' + d.task_id;
+          item.innerHTML = `
+            <div class="bti-head">
+              <span class="bti-id">[${esc(d.category || '')}] ${esc(d.task_id)}</span>
+              <span class="bti-verdict">⟳ running…</span>
+            </div>
+            <div class="bti-meta">${esc(d.prompt.slice(0, 140))}${d.prompt.length > 140 ? '…' : ''}</div>
+          `;
+          taskList.appendChild(item);
+          taskItems[d.task_id] = item;
+          item.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        } else if (ev === 'review_round') {
+          const item = taskItems[d.task_id];
+          if (item) {
+            const note = document.createElement('div');
+            note.className = 'bti-meta';
+            note.style.color = d.verdict === 'pass' ? 'var(--ok)' : 'var(--warn)';
+            note.textContent = `↻ review round ${d.round}: ${d.verdict} — ${d.feedback}`;
+            item.appendChild(note);
+          }
+        } else if (ev === 'task_done') {
+          const item = taskItems[d.task_id];
+          if (item) {
+            item.classList.remove('running');
+            item.classList.add(d.passed ? 'pass' : 'fail');
+            const verdict = item.querySelector('.bti-verdict');
+            const score = d.raw_score != null ? `${d.raw_score}/10` : (d.passed ? '✓' : '✗');
+            verdict.textContent = `${score}  ·  ${d.duration}s`;
+            const ans = document.createElement('div');
+            ans.className = 'bti-answer';
+            ans.textContent = d.answer_preview;
+            item.appendChild(ans);
+            if (d.reason) {
+              const r = document.createElement('div');
+              r.className = 'bti-meta';
+              r.textContent = `↳ ${d.reason}`;
+              item.appendChild(r);
+            }
+          }
+          if (d.passed) passed++; else failed++;
+          const done = passed + failed;
+          document.getElementById('bench-counts').textContent = `${done} / ${totalTasks}  ·  ${passed}✓ ${failed}✗`;
+          document.getElementById('bench-bar').style.width = (done / totalTasks * 100).toFixed(1) + '%';
+        } else if (ev === 'run_finished') {
+          document.getElementById('bench-phase').textContent = '✓ complete';
+          document.getElementById('bench-bar').style.width = '100%';
+          const finalNote = document.createElement('div');
+          finalNote.style.cssText = 'margin-top:12px;padding:10px;background:rgba(85,255,160,0.08);border:1px solid var(--ok);border-radius:4px;font-family:var(--font-mono);font-size:0.8rem';
+          finalNote.innerHTML = `<b style="color:var(--ok)">Run complete</b>  ·  ${d.passed}/${d.total} passed  ·  avg score ${(d.avg_score * 10).toFixed(1)}/10  ·  avg ${d.avg_duration.toFixed(1)}s/task`;
+          taskList.appendChild(finalNote);
+        } else if (ev === 'error') {
+          document.getElementById('bench-phase').textContent = '⚠ error';
+          const err = document.createElement('div');
+          err.style.cssText = 'color:var(--error);padding:8px;font-family:var(--font-mono);font-size:0.8rem';
+          err.textContent = d.message;
+          taskList.appendChild(err);
+        } else if (ev === 'done') {
+          // run finished, exit loop
+        }
+      }
+    }
+  } catch (e) {
+    document.getElementById('bench-phase').textContent = '⚠ ' + e.message;
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = '▶ RUN';
+  }
+}
+
+async function loadBenchHistory() {
+  const list = document.getElementById('bench-history-list');
+  list.innerHTML = '<div class="dash-loading">Loading runs…</div>';
+  try {
+    const resp = await fetch('/api/bench/runs');
+    const runs = await resp.json();
+    _benchHistoryCache = runs;
+    if (!runs.length) {
+      list.innerHTML = '<div class="dash-loading">No runs yet. Go to New Run to start.</div>';
+      return;
+    }
+    list.innerHTML = runs.map(r => {
+      const score = r.avg_score * 10;
+      const cls = score >= 8 ? '' : score >= 5 ? 'mid' : 'low';
+      const date = new Date(r.started_at * 1000).toLocaleString();
+      const dur = r.finished_at ? Math.round((r.finished_at - r.started_at)) + 's' : '—';
+      return `
+        <div class="bench-run-card" onclick="viewBenchRun('${r.id}')">
+          <div class="brc-head">
+            <span class="brc-title">${esc(r.suite_name)} · ${esc(r.pattern)}</span>
+            <span class="brc-score ${cls}">${score.toFixed(1)}/10</span>
+          </div>
+          <div class="brc-meta">
+            <span>${esc(r.model)}</span>
+            <span>${r.passed}/${r.total_tasks} passed</span>
+            <span>${date}</span>
+            <span>${dur}</span>
+            <span style="color:${r.status === 'completed' ? 'var(--ok)' : 'var(--warn)'}">${r.status}</span>
+            ${r.note ? `<span style="color:var(--accent)">📝 ${esc(r.note)}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="color:var(--error)">⚠ ${e.message}</div>`;
+  }
+}
+
+async function viewBenchRun(runId) {
+  try {
+    const resp = await fetch('/api/bench/runs/' + runId);
+    const r = await resp.json();
+    const tasks = (r.task_results || []).map(t =>
+      `<div class="bench-task-item ${t.passed ? 'pass' : 'fail'}">
+        <div class="bti-head">
+          <span class="bti-id">[${esc(t.category)}] ${esc(t.task_id)}</span>
+          <span class="bti-verdict">${t.raw_score != null ? t.raw_score + '/10' : (t.passed ? '✓' : '✗')} · ${(t.duration || 0).toFixed(1)}s</span>
+        </div>
+        <div class="bti-meta">${esc((t.prompt || '').slice(0, 200))}${t.prompt && t.prompt.length > 200 ? '…' : ''}</div>
+        <div class="bti-answer">${esc((t.answer || '').slice(0, 400))}</div>
+        ${t.reason ? `<div class="bti-meta">↳ ${esc(t.reason)}</div>` : ''}
+      </div>`
+    ).join('');
+    const date = new Date(r.started_at * 1000).toLocaleString();
+    const score = (r.avg_score * 10).toFixed(1);
+    const html = `
+      <div style="padding:14px;background:rgba(14,20,29,0.6);border:1px solid var(--border-hi);border-radius:6px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="font-family:var(--font-display);letter-spacing:0.1em;color:var(--accent)">${esc(r.suite_name)} · ${esc(r.pattern)}</h3>
+          <button class="bench-tab-btn" onclick="deleteBenchRun('${r.id}')" style="color:var(--error);border-color:var(--error)">Delete</button>
+        </div>
+        <div class="brc-meta">
+          <span>Model: ${esc(r.model)}</span> · <span>Score: ${score}/10</span> ·
+          <span>${r.passed}/${r.total_tasks} passed</span> · <span>${date}</span>
+          ${r.note ? ` · <span style="color:var(--accent)">📝 ${esc(r.note)}</span>` : ''}
+        </div>
+      </div>
+      <div style="max-height:56vh;overflow-y:auto">${tasks}</div>
+    `;
+    const list = document.getElementById('bench-history-list');
+    list.innerHTML = `<button class="bench-tab-btn" onclick="loadBenchHistory()" style="margin-bottom:10px">◂ Back to history</button>` + html;
+  } catch (e) {
+    alert('Load failed: ' + e.message);
+  }
+}
+
+async function deleteBenchRun(runId) {
+  if (!confirm('Delete this run?')) return;
+  await fetch('/api/bench/runs/' + runId, {method: 'DELETE'});
+  loadBenchHistory();
+}
+
+async function loadBenchCompareOptions() {
+  if (!_benchHistoryCache.length) {
+    try {
+      const resp = await fetch('/api/bench/runs');
+      _benchHistoryCache = await resp.json();
+    } catch { return; }
+  }
+  const opts = _benchHistoryCache.map(r => {
+    const date = new Date(r.started_at * 1000).toLocaleString();
+    const score = (r.avg_score * 10).toFixed(1);
+    return `<option value="${r.id}">[${score}/10] ${esc(r.pattern)} · ${esc(r.suite_name)} · ${esc(r.model)} · ${date}</option>`;
+  }).join('');
+  document.getElementById('bench-cmp-a').innerHTML = opts;
+  document.getElementById('bench-cmp-b').innerHTML = opts;
+  if (_benchHistoryCache.length >= 2) {
+    document.getElementById('bench-cmp-b').selectedIndex = 1;
+  }
+}
+
+async function renderBenchCompare() {
+  const aId = document.getElementById('bench-cmp-a').value;
+  const bId = document.getElementById('bench-cmp-b').value;
+  if (!aId || !bId) return;
+  const view = document.getElementById('bench-compare-view');
+  view.innerHTML = '<div class="dash-loading">Loading…</div>';
+  try {
+    const [a, b] = await Promise.all([
+      fetch('/api/bench/runs/' + aId).then(r => r.json()),
+      fetch('/api/bench/runs/' + bId).then(r => r.json()),
+    ]);
+    const scoreA = (a.avg_score * 10);
+    const scoreB = (b.avg_score * 10);
+    const delta = scoreB - scoreA;
+    const deltaSign = delta > 0 ? '+' : '';
+    const deltaCls = delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+
+    const passDelta = (b.passed || 0) - (a.passed || 0);
+    const durDelta = (b.avg_duration || 0) - (a.avg_duration || 0);
+
+    // Per-task diff (matched by task_id)
+    const bMap = {};
+    (b.task_results || []).forEach(t => { bMap[t.task_id] = t; });
+    const rows = (a.task_results || []).map(ta => {
+      const tb = bMap[ta.task_id] || {};
+      const aPass = !!ta.passed, bPass = !!tb.passed;
+      let flip = '';
+      if (aPass && !bPass) flip = '<span style="color:var(--error)">↓ regression</span>';
+      else if (!aPass && bPass) flip = '<span style="color:var(--ok)">↑ improved</span>';
+      return `
+        <tr>
+          <td style="padding:6px 8px;color:var(--text-dim);font-family:var(--font-mono);font-size:0.72rem">${esc(ta.task_id)}</td>
+          <td style="padding:6px 8px;text-align:center;color:${aPass ? 'var(--ok)' : 'var(--error)'}">${aPass ? '✓' : '✗'}${ta.raw_score != null ? ` ${ta.raw_score}/10` : ''}</td>
+          <td style="padding:6px 8px;text-align:center;color:${bPass ? 'var(--ok)' : 'var(--error)'}">${bPass ? '✓' : '✗'}${tb.raw_score != null ? ` ${tb.raw_score}/10` : ''}</td>
+          <td style="padding:6px 8px">${flip}</td>
+        </tr>
+      `;
+    }).join('');
+
+    view.innerHTML = `
+      <div class="bench-cmp-summary">
+        <div class="bench-cmp-cell">
+          <div class="cmp-label">Avg Score</div>
+          <div class="cmp-val">${scoreA.toFixed(1)} → ${scoreB.toFixed(1)}</div>
+          <div class="cmp-delta ${deltaCls}">${deltaSign}${delta.toFixed(2)}</div>
+        </div>
+        <div class="bench-cmp-cell">
+          <div class="cmp-label">Passed</div>
+          <div class="cmp-val">${a.passed}/${a.total_tasks} → ${b.passed}/${b.total_tasks}</div>
+          <div class="cmp-delta ${passDelta > 0 ? 'up' : passDelta < 0 ? 'down' : ''}">${passDelta >= 0 ? '+' : ''}${passDelta}</div>
+        </div>
+        <div class="bench-cmp-cell">
+          <div class="cmp-label">Avg Duration</div>
+          <div class="cmp-val">${(a.avg_duration || 0).toFixed(1)}s → ${(b.avg_duration || 0).toFixed(1)}s</div>
+          <div class="cmp-delta ${durDelta < 0 ? 'up' : durDelta > 0 ? 'down' : ''}">${durDelta >= 0 ? '+' : ''}${durDelta.toFixed(2)}s</div>
+        </div>
+      </div>
+      <div style="padding:10px;background:rgba(14,20,29,0.5);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;font-size:0.75rem">
+        <div><b style="color:var(--accent)">A:</b> ${esc(a.pattern)} · ${esc(a.model)} ${a.note ? '· ' + esc(a.note) : ''}</div>
+        <div><b style="color:var(--accent)">B:</b> ${esc(b.pattern)} · ${esc(b.model)} ${b.note ? '· ' + esc(b.note) : ''}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;background:rgba(14,20,29,0.4);border:1px solid var(--border);border-radius:4px;font-size:0.8rem">
+        <thead><tr style="background:rgba(56,208,255,0.08);font-family:var(--font-display);letter-spacing:0.1em;text-transform:uppercase;font-size:0.7rem;color:var(--accent)">
+          <th style="padding:8px;text-align:left">Task</th>
+          <th style="padding:8px">A</th>
+          <th style="padding:8px">B</th>
+          <th style="padding:8px;text-align:left">Δ</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  } catch (e) {
+    view.innerHTML = `<div style="color:var(--error)">⚠ ${e.message}</div>`;
+  }
 }
 
 // ── Init: show configured model before any session ────────────────────
@@ -2431,6 +4221,37 @@ openAddDocModal = function() {
 
 // ── Init projects on load ────────────────────────────────────────────
 loadProjects().then(() => loadDocs());
+
+// ── Auto-connect: warm up a session immediately on page load ─────────
+(async function autoConnect() {
+  setConnStatus('connecting', 'Connecting…');
+  try {
+    // Use saved model selection if available
+    const saved = localStorage.getItem('selectedModel');
+    const body = saved ? JSON.parse(saved) : {};
+    const resp = await fetch('/api/session/warmup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.ok && data.session_id) {
+      sessionId = data.session_id;
+      if (data.model) {
+        setModelChip(data.model);
+        modelBarLabel.textContent = data.model.split('/').pop() || data.model;
+      }
+      if (data.context_length) {
+        updateContextBar({context_length: data.context_length, tokens_used: 0});
+      }
+      setConnStatus('connected', 'Connected');
+    } else {
+      setConnStatus('error', data.error || 'Failed');
+    }
+  } catch (e) {
+    setConnStatus('error', 'Offline');
+  }
+})();
 
 // ── Init remote config inputs from localStorage ──────────────────────
 (function initRemoteConfig() {
